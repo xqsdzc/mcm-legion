@@ -1,0 +1,33 @@
+{
+  "name": "mcm-legion",
+  "version": "1.0.0",
+  "description": "麦麦军团 MCM Legion — 基于麦当劳中国 MCP 的收集×攻略×建设放置式游戏 Skill",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "server": "node server.mjs",
+    "web": "node server.mjs",
+    "cli": "node src/cli.mjs",
+    "demo": "node src/cli.mjs demo",
+    "check:game": "node scripts/checkgame.mjs",
+    "check:web": "node scripts/smoke-web.mjs",
+    "assets": "python scripts/build-assets.py"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.0"
+  },
+  "keywords": [
+    "mcd",
+    "mcp",
+    "game",
+    "skill",
+    "workbuddy"
+  ],
+  "license": "MIT"
+}

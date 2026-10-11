@@ -1,0 +1,93 @@
+# workbuddy.md — 麦麦军团开发过程记录
+
+本文档记录「麦麦军团」从需求到上线的完整开发过程，说明本项目如何借助 WorkBuddy 的自动化能力完成。按时间线组织，可作为复现参考。
+
+---
+
+## 一、需求阶段
+
+用户提出参赛创意：基于麦当劳 MCP 能力做一个"收集战力 → 攻略竞争对手据点 → 重建麦麦据点 → 建立麦麦帝国"的游戏，要求明确的收集机制（签到/打卡/订单/偶遇）、5 阶段攻略规则、6 步建设任务、图鉴系统，并上传到 GitLab 参加 [mcd-developer-innovation-challenge](https://github.com/M-China/mcd-developer-innovation-challenge)。
+
+WorkBuddy 首先完成了三件事：
+
+1. **读取挑战赛要求**：抓取 GitHub 仓库 README，确认仓库必须包含 README.md、SKILL.md、CONTEST_DECLARATION.md（官方声明原文）等文件清单。
+2. **实测 MCP 能力**：通过已配置的 mcd-mcp 连接器实际调用 `query-nearby-stores` 与 `order-list`，确认返回结构（门店含 `storeCode`/`storeName`，订单含 `orderId`/`createTime`），确定以 `searchType=1`（收藏优先）+ `searchType=2`（城市搜索）两级降级策略获取门店。
+3. **盘点美术资产**：`raw/` 目录 86 张约 3MB 的 PNG，先分类（据点 6 阶段 ×9、角色、动物），再决定压缩管线。
+
+---
+
+## 二、资产压缩管线（Python + Pillow）
+
+原始资产 270MB，直接入库会让仓库和首屏加载都不可接受。编写 `scripts/build-assets.py`：
+
+1. 按 alpha 通道 bbox 裁剪（去掉透明留白）；
+2. LANCZOS 缩放到目标尺寸（据点 640px、角色 512px）；
+3. FASTOCTREE 256 色量化转 PNG8。
+
+**结果：86 张 270MB → 82 个文件 8.27MB**，视觉无损、秒级加载。
+
+---
+
+## 三、后端实现（Node.js，零运行时依赖）
+
+技术选型：
+
+- **存储**：Node.js ≥ 22.5 内置 `node:sqlite`（`DatabaseSync`）+ WAL，不引入任何驱动，`clone` 即可跑；
+- **MCP 客户端**：`@modelcontextprotocol/sdk` 动态 `import()`，未安装时自动降级为离线演示模式（MOCK 门店 + 按日期确定性生成的演示订单），保证无 Token 也能完整体验；
+- **服务器**：单文件 `server.mjs`，~20 个 REST 路由 + 静态服务 + 极简 `.env` 解析，端口 3210。
+
+核心模块：
+
+| 文件 | 职责 |
+| --- | --- |
+| `src/game/config.js` | 全部数值（战力曲线、战损率、每日限制、MOCK 门店） |
+| `src/game/story.js` | 全部剧情文案（11 角色列传、10 动物故事、9 据点志异） |
+| `src/game/rng.js` | mulberry32 + FNV hash 确定性随机 |
+| `src/game/engine.js` | 游戏引擎（约 560 行，所有规则在此实现） |
+| `src/store/LocalSqliteStore.js` | 存储层，8 张表全部读写 |
+| `src/mcp/mcdApi.js` | MCP 客户端（两级门店降级 + 今日订单过滤） |
+
+### 踩坑记录（都已修复并回归验证）
+
+1. **UTC 时间坑**：`toISOString()` 返回 UTC 日期，东八区傍晚后被算成"明天"，导致刚领取的偶遇动物立刻被跨日清理。修复：统一改用本地时间字符串 `nowLocalStr()`。
+2. **战损超标**：整数单位整体消耗导致 30% 目标实际扣了 63%。修复："就近逼近"算法——每消耗一个单位判断是否让总损失更接近目标，并保证至少损失最弱 1 个单位。
+3. **续攻重打**：攻略总是从第一阶段重新开始，`damage` 进度无意义。修复：从当前阶段续攻（`stagesToDo = 5 - damage`）。
+4. **难度曲线**：最初 9 天即可通关，后五据点形同虚设。修复随机种子口径后模拟得 15 天通关，据点 9 战力 2500 成为有挑战的终局目标。
+
+### 质量保障
+
+- `scripts/checkgame.mjs`：52 项逻辑自检（每日限制/打卡规则/订单去重/五阶段续攻/建设消耗/跨日清理/15 天通关曲线模拟），全部通过；
+- `scripts/smoke-web.mjs`：Playwright 冒烟测试 11 项 + 15 张实机截图存档 `docs/screenshots/`。
+
+---
+
+## 四、前端实现（Vue 3 单文件 SPA）
+
+- 使用 Vue 3 全局构建本地化（`public/vendor/vue.global.prod.js`），无外部网络依赖；
+- 视觉风格：经 ImageGen 生成三套候选（全息指挥地图/暖阳餐厅/童话绘本）后，用户选定**方案一：全息指挥地图**——深空蓝底 `#040b18` + 青色 `#4ddbff` HUD + 扫描线 + 面板四角括线；
+- 四大页签：军团 / 攻略 / 图鉴 / 战报；攻略页左侧军团卡片+战力、右侧据点图像+名称战力，左右箭头切换 9 个据点；
+- 攻略动画按 5 阶段逐段推进（每阶段约 1.15s），战斗日志带 `nextTick` 自动滚动。
+
+踩坑：Vue 3 模板 `ref` 名必须与 `setup()` 返回的变量名一致才能自动滚动（曾因 `battleLog` vs `battleLogEl` 不一致导致日志不滚动）。
+
+---
+
+## 五、文档与参赛材料
+
+| 文件 | 内容 |
+| --- | --- |
+| `README.md` | 项目主文档（玩法、快速开始、目录结构、MCP 集成） |
+| `SKILL.md` | Skill 说明（能力描述、使用方式） |
+| `CONTEST_DECLARATION.md` | 挑战赛官方声明原文（未改动） |
+| `MCP_INTEGRATION.md` | MCP 工具对接说明 |
+| `docs/剧情设定集.md` | 由 `story.js` 自动生成的完整剧情（脚本：`gen-story-doc.mjs`） |
+| `docs/游戏玩法设计.md` | 玩法规则文档 |
+| `docs/数据存储方案.md` | 存储选型、表设计、迁云路径 |
+
+---
+
+## 六、当前状态与后续
+
+- 服务运行于 `http://localhost:3210`（后台任务，端口 3210）；
+- 数据文件 `data/mcd-army.db` 已 gitignore；
+- 待办：初始化 git 仓库并推送至 GitLab（需用户提供仓库地址）。

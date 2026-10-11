@@ -1,0 +1,18 @@
+# 依赖与构建产物
+node_modules/
+
+# 本地数据库与真实 Token（含个人游戏进度，禁止提交）
+data/
+.env
+.mcp.json
+
+# 原始美术素材（约 257MB，仅本地保留，Web 资产由 scripts/build-assets.py 生成到 assets/）
+raw/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.log
+
+# Playwright
+.playwright-cli/

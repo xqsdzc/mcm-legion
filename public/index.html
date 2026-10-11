@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>麦麦军团 · MCM Legion</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🍔</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/vendor/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <!-- 顶栏 HUD -->
+    <header class="hud-top">
+      <div class="hud-brand">
+        <span class="arch-logo">M</span>
+        <div class="hud-title">
+          <strong>麦麦军团</strong>
+          <small>MCM LEGION</small>
+        </div>
+      </div>
+      <div class="hud-power">
+        <span class="label">军团战力</span>
+        <span class="value">{{ fmtNum(state.army.total) }}</span>
+      </div>
+      <div class="hud-meta">
+        <span class="hud-date">{{ state.date }}</span>
+        <span class="mode-badge" :class="state.mcp.mode">{{ state.mcp.mode === 'online' ? 'MCP 实时' : '演示模式' }}</span>
+      </div>
+    </header>
+
+    <!-- 主体 -->
+    <main class="hud-main">
+      <!-- ============ 军团 ============ -->
+      <section v-show="tab === 'legion'" class="page">
+        <div class="panel empire-panel">
+          <div class="panel-title">麦麦帝国进度</div>
+          <div class="empire-row">
+            <div class="empire-stat">
+              <span class="num">{{ state.empire.conquered }}</span><span class="den">/{{ state.empire.total }}</span>
+              <small>已攻略</small>
+            </div>
+            <div class="empire-bar"><i :style="{ width: empirePct + '%' }"></i></div>
+            <div class="empire-stat">
+              <span class="num">{{ state.empire.built }}</span><span class="den">/{{ state.empire.total }}</span>
+              <small>已建成</small>
+            </div>
+          </div>
+          <div class="empire-tip" v-if="state.empire.done">🎉 麦麦帝国已然建成——九座拱门次第亮起。</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">今日行动</div>
+          <div class="action-grid">
+            <button class="action-btn" :class="{ done: state.daily.checkin }" @click="doCheckin">
+              <span class="a-icon">📅</span><span class="a-name">签到</span>
+              <span class="a-desc">{{ state.daily.checkin ? '已完成' : '麦麦粉 ×1' }}</span>
+            </button>
+            <button class="action-btn" @click="openStores">
+              <span class="a-icon">📍</span><span class="a-name">打卡</span>
+              <span class="a-desc">将军 + 麦麦军</span>
+            </button>
+            <button class="action-btn" @click="doOrders">
+              <span class="a-icon">🧾</span><span class="a-name">今日订单</span>
+              <span class="a-desc">订单换战士</span>
+            </button>
+            <button class="action-btn" :class="{ done: state.daily.encounter }" @click="doEncounter">
+              <span class="a-icon">🐾</span><span class="a-name">偶遇</span>
+              <span class="a-desc">{{ state.daily.encounter ? '已完成' : '小动物 ×1' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel" v-for="g in unitGroups" :key="g.title">
+          <div class="panel-title">
+            {{ g.title }}
+            <span class="panel-sub" v-if="g.note">{{ g.note }}</span>
+          </div>
+          <div class="card-row" v-if="g.items.length">
+            <div class="unit-card" v-for="(u, i) in g.items" :key="g.title + i" @click="showUnit(u)">
+              <div class="unit-art">
+                <img :src="asset(u.def ? u.def.asset : u.asset)" :alt="u.name" loading="lazy" />
+                <span class="unit-glow"></span>
+              </div>
+              <div class="unit-name">{{ u.name || unitName(u.key) }}</div>
+              <div class="unit-meta">
+                <span class="unit-count">×{{ u.count }}</span>
+                <span class="unit-power">{{ u.power }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="empty-tip" v-else>暂无单位，通过「今日行动」收集你的军团</div>
+        </div>
+
+      </section>
+
+      <!-- ============ 地图 ============ -->
+      <section v-show="tab === 'map'" class="page">
+        <div class="map-head">
+          <button class="nav-arrow" @click="shiftStronghold(-1)" :disabled="mapIndex === 0">◀</button>
+          <div class="map-title">攻略地图 <span class="map-progress">{{ state.empire.conquered }}/{{ state.empire.total }}</span></div>
+          <button class="nav-arrow" @click="shiftStronghold(1)" :disabled="mapIndex === strongholds.length - 1">▶</button>
+        </div>
+
+        <div class="panel stronghold-panel" v-if="currentSh">
+          <div class="sh-stage-tag" :class="shStatus.cls">{{ shStatus.text }}</div>
+          <div class="sh-art">
+            <img :src="shAsset(currentSh)" :alt="currentSh.name" />
+          </div>
+          <div class="sh-info">
+            <div class="sh-name-row">
+              <span class="sh-name">{{ currentSh.name }}</span>
+              <span class="sh-power">战力 {{ currentSh.power }}</span>
+            </div>
+            <div class="sh-story">{{ currentSh.story }}</div>
+            <div class="sh-actions">
+              <button v-if="currentSh.frontier && !currentSh.conquered" class="btn-primary"
+                      :disabled="state.army.total <= currentSh.power" @click="enterBattle(currentSh.key)">
+                {{ state.army.total > currentSh.power ? '进入攻略' : '战力不足' }}
+              </button>
+              <button v-if="currentSh.conquered && !currentSh.built" class="btn-primary" @click="tab = 'build'">
+                前往建设
+              </button>
+              <span v-if="currentSh.built" class="built-tag">🏰 麦麦据点已建成</span>
+              <span v-if="!currentSh.unlocked" class="lock-tip">击破前一个据点后解锁</span>
+            </div>
+            <div class="sh-damage-track" v-if="currentSh.damage > 0 || currentSh.conquered">
+              <span v-for="d in 6" :key="d" class="dseg" :class="{ on: d - 1 <= currentSh.damage }"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="map-dots">
+          <span v-for="(s, i) in strongholds" :key="s.key" class="dot"
+                :class="{ on: i === mapIndex, done: s.conquered }" @click="mapIndex = i"></span>
+        </div>
+
+        <div class="panel" v-if="currentSh && (currentSh.damage > 0 || currentSh.conquered)">
+          <div class="panel-title">损毁阶段图鉴 <span class="panel-sub">该据点已解锁的损毁场景</span></div>
+          <div class="ruin-row">
+            <div class="ruin-cell" v-for="d in damageStages(currentSh)" :key="d.stage" :class="{ reached: d.reached }">
+              <img :src="`/assets/strongholds/${currentSh.key}_${d.stage}.png`" :alt="d.name" loading="lazy" />
+              <span>{{ d.name }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 建造 ============ -->
+      <section v-show="tab === 'build'" class="page">
+        <div class="panel" v-if="!buildSites.length">
+          <div class="empty-tip">尚无已攻略据点。前往「地图」攻略第一个据点，即可解锁建设任务。</div>
+        </div>
+        <template v-for="s in buildSites" :key="s.key">
+          <div class="panel build-panel" v-if="s.conquered">
+            <div class="panel-title">
+              {{ s.name }}
+              <span class="panel-sub">{{ s.built ? '已建成' : s.buildStep >= 0 ? buildStepName(s.buildStep) : '待开启' }}</span>
+            </div>
+            <div class="build-art">
+              <img :src="`/assets/build/mm_${Math.max(0, s.buildStep)}.png`" :alt="buildStepName(Math.max(0, s.buildStep))" loading="lazy" />
+            </div>
+            <div class="build-info">
+              <div class="build-manager" v-if="s.managerName">店长：<strong>{{ s.managerName }}</strong></div>
+              <div class="build-steps">
+                <span v-for="(b, i) in buildSteps" :key="i" class="bstep"
+                      :class="{ on: i <= s.buildStep, cur: i === s.buildStep && !s.built }">{{ b.name }}</span>
+              </div>
+              <button class="btn-primary" :disabled="s.built || state.daily.dispatch"
+                      @click="openDispatch(s)">
+                {{ s.built ? '已建成' : state.daily.dispatch ? '今日已派遣' : s.buildStep < 0 ? '开启建设（消耗 1 名将军）' : '派遣（消耗 1 名麦麦军）' }}
+              </button>
+              <div class="build-tip">
+                开启建设需任命一名麦麦将军为店长；后续每次派遣消耗一名麦麦军。将军可在打卡中重新获得。
+              </div>
+            </div>
+          </div>
+        </template>
+      </section>
+
+      <!-- ============ 图鉴 ============ -->
+      <section v-show="tab === 'codex'" class="page">
+        <div class="codex-tabs">
+          <button v-for="c in codexTabs" :key="c.key" :class="{ on: codexTab === c.key }" @click="codexTab = c.key">{{ c.name }}</button>
+        </div>
+
+        <template v-if="codexTab === 'animals'">
+          <div class="panel">
+            <div class="panel-title">动物图鉴 <span class="panel-sub">{{ codex.animals.filter(a => a.discovered).length }}/{{ codex.animals.length }}</span></div>
+            <div class="card-row">
+              <div class="unit-card" v-for="a in codex.animals" :key="a.key"
+                   :class="{ locked: !a.discovered }" @click="showAnimal(a)">
+                <div class="unit-art">
+                  <img :src="`/assets/${a.asset}`" :class="{ blurred: !a.discovered }" :alt="a.name" loading="lazy" />
+                  <span class="unit-glow"></span>
+                  <span v-if="!a.discovered" class="lock-mask">未偶遇</span>
+                </div>
+                <div class="unit-name">{{ a.name }}</div>
+                <div class="unit-meta"><span class="unit-power">{{ a.power }}</span></div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template v-if="codexTab === 'stores'">
+          <div class="panel" v-if="!codex.stores.length">
+            <div class="empty-tip">还没有打卡记录。前往「军团 → 打卡」收集你的第一位麦麦将军。</div>
+          </div>
+          <div class="panel" v-for="s in codex.stores" :key="s.storeCode">
+            <div class="store-row">
+              <div>
+                <div class="store-name">{{ s.storeName }} <span v-if="s.isManager" class="mgr-tag">店长</span></div>
+                <div class="store-sub">{{ s.address || '—' }}</div>
+                <div class="store-sub">打卡 {{ s.clockinCount }} 次 · 首访 {{ s.firstClockin }} · 将军{{ s.hasGeneral ? '在编' : '已派遣/未获得' }}</div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template v-if="codexTab === 'ruins'">
+          <div class="panel" v-if="!codex.ruins.length">
+            <div class="empty-tip">尚无据点损毁记录。每攻略一个据点，它的六段损毁场景都会收录于此。</div>
+          </div>
+          <div class="panel" v-for="r in codex.ruins" :key="r.key">
+            <div class="panel-title">{{ r.name }} <span class="panel-sub">{{ r.conquered ? '已攻略' : `损毁 ${r.damage}/5` }}</span></div>
+            <div class="ruin-row">
+              <div class="ruin-cell" v-for="d in r.stages" :key="d.stage" :class="{ reached: d.reached }">
+                <img :src="`/assets/strongholds/${r.key}_${d.stage}.png`" :alt="d.name" loading="lazy" />
+                <span>{{ d.name }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
+      </section>
+    </main>
+
+    <!-- ============ 攻略场景 ============ -->
+    <transition name="fade">
+      <div class="battle-layer" v-if="battle.key">
+        <header class="battle-top">
+          <button class="btn-ghost" @click="quitBattle">◀ 撤退</button>
+          <div class="battle-power">军团战力 <strong>{{ fmtNum(battleArmyPower) }}</strong></div>
+        </header>
+        <div class="battle-body">
+          <div class="battle-left panel">
+            <div class="panel-title">麦麦军团 <span class="panel-sub">出战编制</span></div>
+            <div class="battle-units">
+              <div class="bu-row" v-for="u in battleUnits" :key="u.key + u.name">
+                <img :src="asset(u.asset)" :alt="u.name" loading="lazy" />
+                <span class="bu-name">{{ u.name || unitName(u.key) }}</span>
+                <span class="bu-count" :class="{ zero: u.count === 0 }">×{{ u.count }}</span>
+              </div>
+              <div class="empty-tip" v-if="!battleUnits.length">军团空空如也</div>
+            </div>
+          </div>
+          <div class="battle-right panel">
+            <div class="battle-sh-name">{{ battle.sh.name }} <span class="sh-power">战力 {{ battle.sh.power }}</span></div>
+            <div class="battle-sh-art">
+              <img :src="battleImage" :alt="battle.sh.name" />
+              <div class="battle-stage-name">{{ battleStageName }}</div>
+            </div>
+            <div class="battle-sh-story">{{ battle.sh.story }}</div>
+            <button class="btn-primary btn-attack" :disabled="battle.busy || !canAttack" @click="startAttack">
+              {{ battle.busy ? '攻略进行中…' : canAttack ? '开始攻略' : '战力不足' }}
+            </button>
+            <div class="battle-log" ref="battleLogEl">
+              <div v-for="(l, i) in battle.log" :key="i" :class="l.cls">{{ l.text }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：打卡门店 ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'stores'">
+        <div class="modal panel">
+          <div class="panel-title">选择打卡门店 <span class="panel-sub">同一门店每天限一次</span></div>
+          <div class="store-list">
+            <button v-for="s in stores" :key="s.storeCode" class="store-item" @click="doClockin(s.storeCode)">
+              <span class="si-name">{{ s.storeName }}</span>
+              <span class="si-addr">{{ s.address || '' }}</span>
+            </button>
+          </div>
+          <button class="btn-ghost" @click="modal = null">关闭</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：任命店长 ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'general'">
+        <div class="modal panel">
+          <div class="panel-title">任命店长 <span class="panel-sub">开启建设将消耗该将军</span></div>
+          <div class="store-list">
+            <button v-for="g in myGenerals" :key="g.name" class="store-item" @click="chooseGeneral(g.name)">
+              <span class="si-name">{{ g.name }}</span>
+              <span class="si-addr">战力 {{ g.power }}</span>
+            </button>
+            <div v-if="!myGenerals.length" class="empty-tip">暂无麦麦将军，先去打卡收集一位</div>
+          </div>
+          <button class="btn-ghost" @click="modal = null">取消</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：单位/动物详情 ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'unit' || modal === 'animal'">
+        <div class="modal panel detail-modal" v-if="detail">
+          <div class="detail-art">
+            <img :src="detail.assetUrl" :alt="detail.name" />
+            <span class="unit-glow"></span>
+          </div>
+          <div class="detail-name">{{ detail.name }} <span class="detail-power">战力 {{ detail.power }}</span></div>
+          <div class="detail-story">{{ detail.story }}</div>
+          <div class="detail-extra" v-if="detail.extra">{{ detail.extra }}</div>
+          <button class="btn-ghost" @click="modal = null">关闭</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：帝国终章 ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="showEnding">
+        <div class="modal panel ending-modal">
+          <div class="panel-title">麦麦帝国 · 建成</div>
+          <div class="ending-text">{{ endingText }}</div>
+          <button class="btn-primary" @click="showEnding = false">继续守夜</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 底部导航 -->
+    <nav class="hud-nav">
+      <button v-for="t in tabs" :key="t.key" :class="{ on: tab === t.key }" @click="tab = t.key">
+        <span class="nav-icon" v-html="t.icon"></span>
+        <span class="nav-label">{{ t.name }}</span>
+      </button>
+    </nav>
+
+    <!-- 提示 toast -->
+    <transition name="fade">
+      <div class="toast" v-if="toast">{{ toast }}</div>
+    </transition>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
