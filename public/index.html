@@ -208,7 +208,7 @@
             <div class="panel-title">动物图鉴 <span class="panel-sub">{{ codex.animals.filter(a => a.discovered).length }}/{{ codex.animals.length }}</span></div>
             <div class="codex-grid">
               <div class="unit-card" v-for="a in codex.animals" :key="a.key"
-                   :class="{ locked: !a.discovered }" @click="showAnimal(a)">
+                   :class="{ locked: !a.discovered }" @click="a.discovered && showAnimal(a)">
                 <div class="unit-art">
                   <img :src="`/assets/${a.asset}`" :class="{ blurred: !a.discovered }" :alt="a.name" loading="lazy" />
                   <span class="unit-glow"></span>

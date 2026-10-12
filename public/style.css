@@ -264,7 +264,8 @@ body::after {
   transition: all 0.15s ease;
 }
 .unit-card:hover { border-color: var(--cyan); box-shadow: 0 0 14px rgba(77, 219, 255, 0.35); transform: translateY(-2px); }
-.unit-card.locked { opacity: 0.75; }
+.unit-card.locked { opacity: 0.75; cursor: default; }
+.unit-card.locked:hover { border-color: rgba(77, 219, 255, 0.28); box-shadow: none; transform: none; }
 
 .unit-art { position: relative; height: 74px; display: grid; place-items: end center; }
 .unit-art img { max-height: 74px; max-width: 100%; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)); }
