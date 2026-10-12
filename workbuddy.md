@@ -61,7 +61,7 @@ WorkBuddy 首先完成了三件事：
 
 ### 质量保障
 
-- `scripts/checkgame.mjs`：92 项逻辑自检（每日限制/打卡规则/订单去重/五阶段续攻/建设消耗/跨日清理/动物去重自愈/成就系统/13 天通关曲线模拟），全部通过；
+- `scripts/checkgame.mjs`：98 项逻辑自检（每日限制/打卡规则/订单去重/五阶段续攻/建设消耗/跨日清理/动物去重自愈/成就系统/13 天通关曲线模拟），全部通过；
 - `scripts/smoke-web.mjs`：Playwright 冒烟测试 14 项 + 实机截图存档 `docs/screenshots/`。
 
 ---

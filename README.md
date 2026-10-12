@@ -48,29 +48,31 @@ cp .env.example .env   # 编辑 .env 填入 MCD_MCP_TOKEN
 npm start               # 启动游戏 → http://localhost:3210
 npm run demo            # 命令行演示完整流程（独立存档）
 npm run cli             # 命令行交互游玩
-npm run check:game      # 游戏逻辑自检（92 项）
+npm run check:game      # 游戏逻辑自检（98 项）
 npm run check:web       # Web 界面冒烟测试（14 项，需 playwright）
 ```
 
-> **美术资源**：`raw/` 下为 86 张原始大图（约 3MB/张），由脚本生成 Web 用资产：
+> **美术资源**：`raw/` 原始大图（86 张 PNG，约 3MB/张、合计 274MB）**未纳入仓库**，
+> 已在 `.gitignore` 中排除，仅本地保留作生成源。仓库提交的是生成后的 Web 资产：
 > `assets/` 立绘与据点图（据点/建设 384px、角色/动物 320px，共 3.6MB）+
 > `assets/avatars/` 128px 头部特写头像（22 张共 196KB，供出战编制等小图标位）。
-> 重新生成：`pip install pillow && npm run assets && npm run assets:avatars`。
+> **克隆仓库即可直接运行，无需 `raw/`**；仅在需要重新生成资产时才需自备原始大图：
+> `pip install pillow && npm run assets && npm run assets:avatars`。
 
 ## 🎮 使用示例
 
 1. **打开** http://localhost:3210 ，顶栏显示军团徽章 LOGO、军团总战力与数据模式（演示模式 / MCP 实时）。
-2. **每日行动**：签到（麦麦粉×1，随机男女）→ 打卡（选附近门店，得将军+麦麦军）→ 订单奖励（每单召唤 1 名美食战士）→ 偶遇（1 只当天有效的小动物，每只都有专属名字）；每次行动都会弹出收获详情。
+2. **每日行动**：签到（麦麦粉×1，随机男女）→ 打卡（选附近门店，得将军+麦麦军，**每天最多 3 次**，同一门店限一次）→ 订单奖励（每单召唤 1 名美食战士）→ 偶遇（1 只当天有效的小动物，每只都有专属名字）；每次行动都会弹出收获详情。
 3. **攻略**：「地图」页左右箭头浏览 9 个据点，战力高于据点时「进入攻略」；战斗分 5 阶段，据点图像从「完好无损」逐阶段变为「完全损毁」，战斗日志同步播放六阶段损毁描述，每阶段军团损失约 30% 战力（将军与动物免疫）；战力不足会被迫撤退，损毁进度保留，可改日续攻；攻略完成后按钮变为「攻略完成」。
 4. **建设**：据点完全损毁后解锁建设，开启需任命 1 名麦麦将军为**店长**，后续每次派遣消耗 1 名麦麦军，共 6 步（夯土奠基 → 盛大开业），每日限派遣 1 次；建造面板展示每一步的阶段描述。
 5. **图鉴**：动物图鉴（10 只，一行 4 个网格）、打卡地（门店打卡记录）、据点图鉴（已攻略据点的 6 段损毁场景）。
 6. **详情弹层**：点击军团卡片查看角色/动物介绍（含完整故事文案），所有弹层均可按 **Esc** 或点「关闭」按钮关闭。
-7. **成就**：「成就」页查看 20 枚徽章（日常/军团/攻略/建设/终章五组）的收集进度，达成条件时弹出解锁庆典，可点击徽章查看条件与彩蛋文案。
+7. **成就**：「成就」页查看 20 枚徽章（日常 9 / 军团 4 / 攻略 4 / 建设 3）的收集进度，达成条件时弹出解锁庆典，可点击已解锁徽章查看条件与彩蛋文案（未解锁的不可点击）。
 
 ![军团](docs/screenshots/01b-legion-full.jpg)
 ![攻略](docs/screenshots/05b-battle-result.jpg)
 ![建设](docs/screenshots/06c-build-started.jpg)
-![成就](docs/screenshots/10-achievements.jpg)
+![动物图鉴](docs/screenshots/07-codex-animals.jpg)
 
 ## 👥 目标用户
 
@@ -83,7 +85,7 @@ npm run check:web       # Web 界面冒烟测试（14 项，需 playwright）
 - **后端**：Node.js 原生 HTTP 服务（`server.mjs`），零框架；本地数据库使用内置 `node:sqlite`（SQLite WAL 模式）
 - **MCP**：`@modelcontextprotocol/sdk` StreamableHTTP 客户端，动态 import，未安装不影响启动
 - **前端**：Vue 3（本地化 `public/vendor/vue.global.prod.js`，无外部网络依赖），全息指挥地图 UI 风格
-- **美术**：`raw/` 原始大图 → `scripts/build-assets.py`（Pillow 裁切/缩放/256 色量化）→ `assets/` Web 资产；`scripts/build-avatars.py` 另切 128px 头像；`scripts/compress-docs.py` 压缩文档配图
+- **美术**：`raw/` 原始大图（仅本地，未入库）→ `scripts/build-assets.py`（Pillow 裁切/缩放/256 色量化）→ `assets/` Web 资产；`scripts/build-avatars.py` 另切 128px 头像；`scripts/compress-docs.py` 压缩文档配图
 
 ```
 mcd-pk/
@@ -102,12 +104,13 @@ mcd-pk/
 │       ├── story.js          全部剧情文案（角色/动物/据点/终章）
 │       ├── engine.js         游戏引擎（签到/打卡/订单/偶遇/攻略/建设/图鉴/成就）
 │       ├── achievements.js   20 枚成就定义与徽章
-│       └── rng.js            带种子的确定性随机
+│       └── rng.js            随机工具（订单用种子确定性随机；偶遇/性别用真随机）
 ├── scripts/
 │   ├── build-assets.py       美术资产生成（立绘/据点/建设）
 │   ├── build-avatars.py      头像生成（128px 头部特写）
+│   ├── gen-story-doc.mjs     由 story.js 生成剧情设定集文档
 │   ├── compress-docs.py      文档配图压缩（PNG→JPEG）
-│   ├── checkgame.mjs         游戏逻辑自检（92 项）
+│   ├── checkgame.mjs         游戏逻辑自检（98 项）
 │   └── smoke-web.mjs         Web 冒烟测试（14 项）
 ├── assets/                   角色/动物/据点 6 阶段/建设 6 阶段图像
 │   └── avatars/              22 张 128px 头部特写头像
