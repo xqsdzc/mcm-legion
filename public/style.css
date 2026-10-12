@@ -229,6 +229,8 @@ body::after {
 .action-btn:hover { border-color: var(--cyan); box-shadow: 0 0 12px rgba(77, 219, 255, 0.35); transform: translateY(-1px); }
 .action-btn:active { transform: scale(0.97); }
 .action-btn .a-icon { font-size: 20px; filter: drop-shadow(0 0 6px rgba(77, 219, 255, 0.6)); }
+.action-btn .a-icon svg { width: 24px; height: 24px; display: block; margin: 0 auto; color: var(--cyan); }
+.action-btn.done .a-icon svg { color: var(--green); }
 .action-btn .a-name { font-size: 12px; letter-spacing: 1px; }
 .action-btn .a-desc { font-size: 9px; color: var(--text-dim); }
 .action-btn.done { opacity: 0.55; border-style: dashed; }
@@ -345,6 +347,11 @@ body::after {
 }
 .bstep.on { color: var(--cyan); border-color: var(--cyan); background: var(--cyan-soft); }
 .bstep.cur { color: #06121f; background: var(--cyan); font-weight: 700; box-shadow: 0 0 10px rgba(77, 219, 255, 0.7); }
+.build-desc {
+  font-size: 12px; line-height: 1.8; color: #bfefff;
+  background: rgba(77, 219, 255, 0.07); border: 1px dashed rgba(77, 219, 255, 0.25);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; text-align: left;
+}
 .build-tip { font-size: 10px; color: var(--text-dim); margin-top: 8px; line-height: 1.6; }
 
 /* ---------------- 图鉴 ---------------- */
@@ -379,6 +386,12 @@ body::after {
 .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 24px rgba(77, 219, 255, 0.85); }
 .btn-primary:active:not(:disabled) { transform: scale(0.97); }
 .btn-primary:disabled { filter: grayscale(0.7); opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+/* 攻略完成：金色庆祝态 */
+.btn-primary.btn-done {
+  background: linear-gradient(135deg, #ffe9a8, #f5b93c);
+  box-shadow: 0 0 16px rgba(245, 185, 60, 0.55), inset 0 0 8px rgba(255, 255, 255, 0.35);
+}
+.btn-primary.btn-done:hover:not(:disabled) { box-shadow: 0 0 24px rgba(245, 185, 60, 0.85); }
 
 .btn-ghost {
   padding: 7px 18px; border-radius: 8px; cursor: pointer;
@@ -626,6 +639,8 @@ body::after {
 }
 .btn-mini:hover:not(:disabled) { border-color: var(--cyan); box-shadow: 0 0 10px rgba(77, 219, 255, 0.35); }
 .btn-mini:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-mini .mini-icon { display: inline-flex; vertical-align: -2px; margin-right: 3px; }
+.btn-mini .mini-icon svg { width: 12px; height: 12px; display: block; }
 .city-picker {
   border: 1px solid var(--panel-line); border-radius: var(--radius);
   background: rgba(6, 18, 36, 0.6);

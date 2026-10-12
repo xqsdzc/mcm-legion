@@ -56,7 +56,8 @@ function grant(store, type, key, count, name = "") {
 console.log("\n[1] 每日行动限制");
 {
   const { store, engine } = freshEngine();
-  engine.checkin();
+  const c1 = engine.checkin();
+  ok(c1.firstEver === true, "首次签到标记（用于弹世界观）");
   let err = null;
   try {
     engine.checkin();
@@ -64,7 +65,9 @@ console.log("\n[1] 每日行动限制");
     err = e;
   }
   ok(err !== null, "签到一天一次");
-  ok(store.getUnitCount("fan", "fan") === 1, "签到获得 1 麦麦粉");
+  const fans = store.getUnitCount("fan", "fan", "男") + store.getUnitCount("fan", "fan", "女");
+  ok(fans === 1, "签到获得 1 麦麦粉（随机男女）");
+  ok(store.getUnitCount("fan", "fan", "男") <= 1 && store.getUnitCount("fan", "fan", "女") <= 1, "麦麦粉按性别分单位存放");
 
   engine.encounter();
   const seen1 = store.getDaily(engine.getState().date, "encounter").detail;
@@ -135,6 +138,8 @@ console.log("\n[4] 攻略：五阶段、撤退与续攻");
   grant(store, "jun", "jun", 4); // 140
   const res = engine.attack(STRONGHOLDS[0].key);
   ok(res.stages.length === 3, `约 2.3 倍战力时完成 3 阶段（实际 ${res.stages.length}）`);
+  ok(res.stages.every((s) => s.name && s.desc), "每阶段带损毁名称与描述（写入战斗日志）");
+  ok(res.stages[0].name === "轻微损伤" && res.stages[0].desc === "招牌晃了晃，橱玻璃裂了一道缝。", "阶段描述取自损毁六阶段文案");
   ok(res.conquered === false, "未完全损毁");
   ok(res.endPower < STRONGHOLDS[0].power, `撤退时剩余 ${res.endPower} 已低于据点战力`);
   ok(store.getStronghold(STRONGHOLDS[0].key).damage === 3, "损毁进度保留为 3 阶段");
@@ -182,6 +187,7 @@ console.log("\n[5] 建设：消耗将军/麦麦军、店长、可再次获得");
   ok(b1.consumed.type === "general", "开启建设消耗 1 名麦麦将军");
   ok(b1.managerName === target.storeName, "将军名字显示为店长");
   ok(b1.buildStep === 0, "建设进度 mm_0（夯土奠基）");
+  ok(b1.buildDesc === "店长亲手浇下第一方混凝土。", "建设描述写入展示（六阶段文案）");
   ok(store.getUnitCount("general", "general", target.storeName) === 0, "将军被消耗");
   ok(store.getStore(target.storeCode).has_general === 0, "该店将军标记解除");
 

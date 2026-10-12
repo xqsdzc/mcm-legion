@@ -44,6 +44,9 @@ export class LegionEngine {
     const units = this.store.listUnits();
     const detail = units.map((u) => {
       const def = UNITS[u.key] ?? ANIMALS[u.key];
+      // 麦麦粉按性别取立绘（name 为 "男"/"女"；历史数据 name 为空时按男）
+      const asset =
+        def?.type === "fan" && u.name === "女" ? (def.altAsset ?? def.asset) : (def?.asset ?? "");
       return {
         type: u.type,
         key: u.key,
@@ -51,7 +54,7 @@ export class LegionEngine {
         count: u.count,
         unitPower: def?.power ?? 0,
         power: (def?.power ?? 0) * u.count,
-        asset: def?.asset ?? "",
+        asset,
         assetAlt: def?.altAsset ?? "",
         def: def ?? null,
       };
@@ -150,26 +153,31 @@ export class LegionEngine {
 
   /* ================= 每日行动 ================= */
 
-  /** 签到：每日一次，收集麦麦粉 x1 */
+  /** 签到：每日一次，收集麦麦粉 x1（每次随机男女） */
   checkin() {
     this.rollover();
     const today = todayStr();
     if (this.store.getDaily(today, "checkin")) {
       throw new Error("今天已经签到过啦，明天再来");
     }
-    this.store.addUnit("fan", "fan", "", DAILY.checkinFans);
+    const firstEver = !this.store.hasAnyDaily("checkin");
+    // 麦麦粉随机男女：name 记录性别（"男"/"女"），立绘按性别取
+    const gender = pickRandom(["男", "女"]);
+    this.store.addUnit("fan", "fan", gender, DAILY.checkinFans);
     this.store.markDaily(today, "checkin", `麦麦粉 x${DAILY.checkinFans}`);
     const def = UNITS.fan;
+    const asset = gender === "女" ? (def.altAsset ?? def.asset) : def.asset;
     return {
-      gained: { key: "fan", count: DAILY.checkinFans },
+      gained: { key: "fan", count: DAILY.checkinFans, gender },
+      firstEver,
       items: [
         {
           type: def.type,
           key: "fan",
-          name: def.name,
+          name: `麦麦粉（${gender}）`,
           count: DAILY.checkinFans,
           power: def.power,
-          asset: def.asset,
+          asset,
           assetAlt: def.altAsset,
           story: CHARACTERS.fan.story,
         },
@@ -420,6 +428,8 @@ export class LegionEngine {
       const stageNo = startDamage + i;
       stages.push({
         stage: stageNo,
+        name: DAMAGE[stageNo].name,
+        desc: DAMAGE[stageNo].desc,
         lost: loss.lostDetail,
         lostPower: loss.lostPower,
         remainingPower: curPower,
@@ -520,6 +530,7 @@ export class LegionEngine {
       managerName,
       buildStep: this.store.getStronghold(key).build_step,
       buildName: BUILD[this.store.getStronghold(key).build_step].name,
+      buildDesc: BUILD[this.store.getStronghold(key).build_step].desc,
       built: this.store.getStronghold(key).build_step >= BUILD_RULES.steps - 1,
     };
   }

@@ -11,6 +11,20 @@ const NAV_ICONS = {
   codex: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17.5H6.5A2.5 2.5 0 0 0 4 22V4.5z"/><path d="M20 19.5V22H6.5"/><path d="M8.5 7h8M8.5 10.5h5"/></svg>`,
 };
 
+/* 今日行动图标（与底部导航同风格的线条 SVG） */
+const ACTION_ICONS = {
+  // 签到：日历 + 对勾
+  checkin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M9 15.2l2.1 2.1 4.4-4.6"/></svg>`,
+  // 打卡：定位 pin + 金色拱门
+  clockin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-6.8-5.4-6.8-10.8a6.8 6.8 0 0 1 13.6 0c0 5.4-6.8 10.8-6.8 10.8z"/><path d="M10.2 13.9v-1.1a1.8 1.8 0 0 1 3.6 0v1.1"/></svg>`,
+  // 今日订单：小票
+  orders: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20.5H7V3.5z"/><path d="M14 3.5V8h4"/><path d="M10 12h5M10 15.5h5"/></svg>`,
+  // 偶遇：爪印
+  encounter: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><ellipse cx="12" cy="15.6" rx="4.3" ry="3.5"/><circle cx="6.2" cy="10.2" r="1.7"/><circle cx="9.8" cy="7.2" r="1.7"/><circle cx="14.2" cy="7.2" r="1.7"/><circle cx="17.8" cy="10.2" r="1.7"/></svg>`,
+  // 定位
+  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.2-6.5-10.3a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/></svg>`,
+};
+
 createApp({
   setup() {
     /* ---------- 基础状态 ---------- */
@@ -20,9 +34,11 @@ createApp({
     const modal = ref(null);
     const detail = ref(null);
     const gain = ref(null); // { title, subtitle, items: [{name,count,power,asset,assetAlt,story,extra,order}] }
+    const pendingWorld = ref(false); // 首次签到后待展示世界观
     const toast = ref("");
     const showEnding = ref(false);
     let toastTimer = null;
+    let endingShown = false; // 终章每会话只弹一次
 
     const emptyState = () => ({
       date: "", player: null, mcp: { mode: "offline" }, army: { detail: [], byType: {}, total: 0, vulnerable: 0 },
@@ -34,7 +50,7 @@ createApp({
     const stores = ref([]);
 
     /* ---------- 攻略场景 ---------- */
-    const battle = ref({ key: null, sh: null, busy: false, log: [], stage: 0, stageName: "" });
+    const battle = ref({ key: null, sh: null, busy: false, log: [], stage: 0, stageName: "", conquered: false });
     const battleUnits = ref([]);
     const battleArmyPower = ref(0);
     const battleLogEl = ref(null);
@@ -64,6 +80,11 @@ createApp({
         ?? codex.value.animals.find((a) => a.key === key);
       return hit ? hit.name : key;
     };
+    // 展示名：麦麦粉带性别（name 为 "男"/"女"）
+    const unitLabel = (u) => {
+      if (u.type === "fan" && u.name) return `麦麦粉（${u.name}）`;
+      return u.name || unitName(u.key);
+    };
 
     async function api(path, body) {
       const res = await fetch(path, {
@@ -88,11 +109,21 @@ createApp({
       modal.value = "gain";
     }
 
+    /** 关闭收获弹窗；若首次签到待展示世界观，则接着弹世界观 */
+    function closeGain() {
+      modal.value = null;
+      if (pendingWorld.value) {
+        pendingWorld.value = false;
+        modal.value = "world";
+      }
+    }
+
     /* ---------- 数据加载 ---------- */
     async function refresh() {
       const prevDone = state.value.empire.done;
       state.value = await api("/api/state");
-      if (!prevDone && state.value.empire.done) {
+      if (!prevDone && state.value.empire.done && !endingShown) {
+        endingShown = true;
         showEnding.value = true;
       }
       // 地图索引跟随攻略前线
@@ -107,7 +138,11 @@ createApp({
     /* ---------- Esc 关闭弹层 ---------- */
     function onKeydown(e) {
       if (e.key !== "Escape") return;
-      if (modal.value) { modal.value = null; return; }
+      if (modal.value) {
+        if (modal.value === "gain") closeGain();
+        else modal.value = null;
+        return;
+      }
       if (showEnding.value) { showEnding.value = false; }
     }
 
@@ -137,7 +172,8 @@ createApp({
       try {
         const r = await api("/api/checkin", {});
         await refresh();
-        showGain("签到收获", "明天再来", r.items);
+        if (r.firstEver) pendingWorld.value = true;
+        showGain("签到收获", r.firstEver ? "欢迎加入麦麦军团" : "明天再来", r.items);
       } catch (e) { showToast(e.message); }
     }
 
@@ -223,6 +259,8 @@ createApp({
       try {
         await api("/api/reset", {});
         modal.value = null;
+        pendingWorld.value = false;
+        endingShown = false;
         showEnding.value = false;
         battle.value.key = null;
         codexTab.value = "animals";
@@ -267,7 +305,7 @@ createApp({
     function enterBattle(key) {
       const sh = state.value.strongholds.find((s) => s.key === key);
       if (!sh) return;
-      battle.value = { key, sh, busy: false, log: [], stage: 0, stageName: "" };
+      battle.value = { key, sh, busy: false, log: [], stage: 0, stageName: "", conquered: false };
       // 出战编制快照
       battleUnits.value = state.value.army.detail.map((d) => ({ ...d }));
       battleArmyPower.value = state.value.army.total;
@@ -302,16 +340,17 @@ createApp({
           }
           battleArmyPower.value = st.remainingPower;
           battle.value.stage = st.stage;
-          battle.value.stageName = DAMAGE_NAMES[st.stage];
+          battle.value.stageName = st.name;
           const lostText = st.lost.length
-            ? st.lost.map((l) => `${l.name || unitName(l.key)}×${l.count}`).join("、")
+            ? st.lost.map((l) => `${unitLabel(l)}×${l.count}`).join("、")
             : "将军与动物无恙";
           pushBattleLog(
             "",
-            `第 ${st.stage} 阶段「${DAMAGE_NAMES[st.stage]}」：损失 ${st.lostPower} 战力（${lostText}）→ 剩余 ${st.remainingPower}`
+            `第 ${st.stage} 阶段「${st.name}」：${st.desc}损失 ${st.lostPower} 战力（${lostText}）→ 剩余 ${st.remainingPower}`
           );
           await sleep(1150);
         }
+        battle.value.conquered = r.conquered;
         if (r.conquered) {
           pushBattleLog("win", `🎉 完全损毁！「${sh.name}」攻略成功，解锁下一个据点与建设任务`);
         } else {
@@ -348,7 +387,7 @@ createApp({
       try {
         const r = await api("/api/build", { key: target, generalName });
         const cost = r.consumed.type === "general" ? `麦麦将军「${r.consumed.name}」` : "麦麦军 ×1";
-        showToast(`派遣成功：消耗 ${cost}，进度「${r.buildName}」${r.built ? " 🎉 麦麦据点建成！" : ""}`);
+        showToast(`派遣成功：消耗 ${cost}，进度「${r.buildName}」——${r.buildDesc}${r.built ? " 🎉 麦麦据点建成！" : ""}`);
         modal.value = null;
         await refresh();
         await loadCodex();
@@ -383,9 +422,9 @@ createApp({
       const story = codex.value.characters.find((c) => c.key === u.key)
         || (u.type === "animal" ? codex.value.animals.find((c) => c.key === u.key) : null);
       detail.value = {
-        name: u.name || (story ? story.name : u.key),
+        name: unitLabel(u),
         power: u.power,
-        assetUrl: asset(u.def ? u.def.asset : u.asset),
+        assetUrl: asset(u.asset || (u.def && u.def.asset)),
         story: story ? story.story : "",
         extra: u.type === "animal" ? "小动物只存在于偶遇当天" : null,
       };
@@ -427,7 +466,8 @@ createApp({
       buildSites, buildSteps, buildStepName, openDispatch, doDispatch, chooseGeneral, myGenerals,
       unitGroups, showUnit, showAnimal, doCheckin, openStores, doClockin, doOrders, doEncounter, doReset,
       city, cityInput, cityPickerOpen, locating, hotCities, locateCity, switchCity,
-      fmtNum, asset, avatarUrl, unitName, conqueredPct, builtPct, endingText, strongholds,
+      fmtNum, asset, avatarUrl, unitName, unitLabel, closeGain, pendingWorld,
+      ACTION_ICONS, conqueredPct, builtPct, endingText, strongholds,
     };
   },
 }).mount("#app");

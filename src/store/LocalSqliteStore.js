@@ -157,6 +157,13 @@ export class LocalSqliteStore {
     return this.db.prepare("SELECT * FROM daily_log WHERE date = ?").all(date);
   }
 
+  /** 历史上是否执行过某行动（不限日期，用于「首次签到」判断） */
+  hasAnyDaily(action) {
+    return Boolean(
+      this.db.prepare("SELECT 1 FROM daily_log WHERE action = ? LIMIT 1").get(action)
+    );
+  }
+
   markDaily(date, action, detail = "") {
     const now = nowLocalStr();
     this.db

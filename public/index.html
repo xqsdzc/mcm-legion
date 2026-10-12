@@ -59,19 +59,19 @@
           <div class="panel-title">今日行动</div>
           <div class="action-grid">
             <button class="action-btn" :class="{ done: state.daily.checkin }" @click="doCheckin">
-              <span class="a-icon">📅</span><span class="a-name">签到</span>
+              <span class="a-icon" v-html="ACTION_ICONS.checkin"></span><span class="a-name">签到</span>
               <span class="a-desc">{{ state.daily.checkin ? '已完成' : '麦麦粉 ×1' }}</span>
             </button>
             <button class="action-btn" @click="openStores">
-              <span class="a-icon">📍</span><span class="a-name">打卡</span>
+              <span class="a-icon" v-html="ACTION_ICONS.clockin"></span><span class="a-name">打卡</span>
               <span class="a-desc">将军 + 麦麦军</span>
             </button>
             <button class="action-btn" @click="doOrders">
-              <span class="a-icon">🧾</span><span class="a-name">今日订单</span>
+              <span class="a-icon" v-html="ACTION_ICONS.orders"></span><span class="a-name">今日订单</span>
               <span class="a-desc">订单换战士</span>
             </button>
             <button class="action-btn" :class="{ done: state.daily.encounter }" @click="doEncounter">
-              <span class="a-icon">🐾</span><span class="a-name">偶遇</span>
+              <span class="a-icon" v-html="ACTION_ICONS.encounter"></span><span class="a-name">偶遇</span>
               <span class="a-desc">{{ state.daily.encounter ? '已完成' : '小动物 ×1' }}</span>
             </button>
           </div>
@@ -85,10 +85,10 @@
           <div class="card-row" v-if="g.items.length">
             <div class="unit-card" v-for="(u, i) in g.items" :key="g.title + i" @click="showUnit(u)">
               <div class="unit-art">
-                <img :src="asset(u.def ? u.def.asset : u.asset)" :alt="u.name" loading="lazy" />
+                <img :src="asset(u.asset || (u.def && u.def.asset))" :alt="u.name" loading="lazy" />
                 <span class="unit-glow"></span>
               </div>
-              <div class="unit-name">{{ u.name || unitName(u.key) }}</div>
+              <div class="unit-name">{{ unitLabel(u) }}</div>
               <div class="unit-meta">
                 <span class="unit-count">×{{ u.count }}</span>
                 <span class="unit-power">{{ u.power }}</span>
@@ -172,6 +172,7 @@
                 <span v-for="(b, i) in buildSteps" :key="i" class="bstep"
                       :class="{ on: i <= s.buildStep, cur: i === s.buildStep && !s.built }">{{ b.name }}</span>
               </div>
+              <div class="build-desc" v-if="s.buildStep >= 0">{{ s.buildDesc }}</div>
               <button class="btn-primary" :disabled="s.built || state.daily.dispatch"
                       @click="openDispatch(s)">
                 {{ s.built ? '已建成' : state.daily.dispatch ? '今日已派遣' : s.buildStep < 0 ? '开启建设（消耗 1 名将军）' : '派遣（消耗 1 名麦麦军）' }}
@@ -253,7 +254,7 @@
             <div class="battle-units">
               <div class="bu-row" v-for="(u, i) in battleUnits" :key="u.key + u.name">
                 <img :src="avatarUrl(u, i)" :alt="u.name" loading="lazy" />
-                <span class="bu-name">{{ u.name || unitName(u.key) }}</span>
+                <span class="bu-name">{{ unitLabel(u) }}</span>
                 <span class="bu-count" :class="{ zero: u.count === 0 }">×{{ u.count }}</span>
               </div>
               <div class="empty-tip" v-if="!battleUnits.length">军团空空如也</div>
@@ -266,8 +267,13 @@
               <div class="battle-stage-name">{{ battleStageName }}</div>
             </div>
             <div class="battle-sh-story">{{ battle.sh.story }}</div>
-            <button class="btn-primary btn-attack" :disabled="battle.busy || !canAttack" @click="startAttack">
-              {{ battle.busy ? '攻略进行中…' : canAttack ? '开始攻略' : '战力不足' }}
+            <button class="btn-primary btn-attack" :class="{ 'btn-done': battle.conquered }"
+                    :disabled="battle.busy || (!battle.conquered && !canAttack)"
+                    @click="battle.conquered ? quitBattle() : startAttack()">
+              <template v-if="battle.busy">攻略进行中…</template>
+              <template v-else-if="battle.conquered">攻略完成</template>
+              <template v-else-if="canAttack">开始攻略</template>
+              <template v-else>战力不足</template>
             </button>
             <div class="battle-log" ref="battleLogEl">
               <div v-for="(l, i) in battle.log" :key="i" :class="l.cls">{{ l.text }}</div>
@@ -284,7 +290,9 @@
           <div class="panel-title">选择打卡门店 <span class="panel-sub">同一门店每天限一次</span></div>
           <div class="city-bar">
             <span class="city-cur">当前城市：<strong>{{ city || '默认' }}</strong></span>
-            <button class="btn-mini" @click="locateCity" :disabled="locating">{{ locating ? '定位中…' : '📍 定位' }}</button>
+            <button class="btn-mini" @click="locateCity" :disabled="locating">
+              <span class="mini-icon" v-html="ACTION_ICONS.pin"></span>{{ locating ? '定位中…' : '定位' }}
+            </button>
             <button class="btn-mini" @click="cityPickerOpen = !cityPickerOpen">{{ cityPickerOpen ? '收起' : '切换城市' }}</button>
           </div>
           <div class="city-picker" v-if="cityPickerOpen">
@@ -363,7 +371,18 @@
               </div>
             </div>
           </div>
-          <button class="btn-primary" @click="modal = null">收下</button>
+          <button class="btn-primary" @click="closeGain">收下</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：世界观（首次签到） ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'world'">
+        <div class="modal panel world-modal" v-if="codex.world && codex.world.intro">
+          <div class="panel-title">世界观 <span class="panel-sub">麦麦军团 · 起源</span></div>
+          <div class="ending-text">{{ codex.world.intro }}</div>
+          <button class="btn-primary" @click="modal = null">开始征战</button>
         </div>
       </div>
     </transition>
@@ -389,7 +408,7 @@
     <transition name="fade">
       <div class="modal-layer" v-if="showEnding">
         <div class="modal panel ending-modal">
-          <div class="panel-title">麦麦帝国 · 建成</div>
+          <div class="panel-title">终章 · 麦麦帝国 <span class="panel-sub">九座拱门次第亮起</span></div>
           <div class="ending-text">{{ endingText }}</div>
           <button class="btn-primary" @click="showEnding = false">继续守夜</button>
         </div>
