@@ -27,6 +27,9 @@
         <span class="hud-date">{{ state.date }}</span>
         <span class="mode-badge" :class="state.mcp.mode">{{ state.mcp.mode === 'online' ? 'MCP 实时' : '演示模式' }}</span>
       </div>
+      <button class="hud-reset" title="重置全部进度" @click="modal = 'reset'" aria-label="重置进度">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
     </header>
 
     <!-- 主体 -->
@@ -36,12 +39,15 @@
         <div class="panel empire-panel">
           <div class="panel-title">麦麦帝国进度</div>
           <div class="empire-row">
-            <div class="empire-stat">
+            <div class="empire-stat conq">
               <span class="num">{{ state.empire.conquered }}</span><span class="den">/{{ state.empire.total }}</span>
               <small>已攻略</small>
             </div>
-            <div class="empire-bar"><i :style="{ width: empirePct + '%' }"></i></div>
-            <div class="empire-stat">
+            <div class="empire-bar">
+              <i class="bar-conq" :style="{ width: conqueredPct + '%' }"></i>
+              <i class="bar-built" :style="{ width: builtPct + '%' }"></i>
+            </div>
+            <div class="empire-stat built">
               <span class="num">{{ state.empire.built }}</span><span class="den">/{{ state.empire.total }}</span>
               <small>已建成</small>
             </div>
@@ -98,7 +104,7 @@
       <section v-show="tab === 'map'" class="page">
         <div class="map-head">
           <button class="nav-arrow" @click="shiftStronghold(-1)" :disabled="mapIndex === 0">◀</button>
-          <div class="map-title">攻略地图 <span class="map-progress">{{ state.empire.conquered }}/{{ state.empire.total }}</span></div>
+          <div class="map-title">攻略地图 <span class="map-progress">第 {{ mapIndex + 1 }}/{{ state.empire.total }}</span></div>
           <button class="nav-arrow" @click="shiftStronghold(1)" :disabled="mapIndex === strongholds.length - 1">▶</button>
         </div>
 
@@ -278,7 +284,10 @@
           <div class="panel-title">选择打卡门店 <span class="panel-sub">同一门店每天限一次</span></div>
           <div class="store-list">
             <button v-for="s in stores" :key="s.storeCode" class="store-item" @click="doClockin(s.storeCode)">
-              <span class="si-name">{{ s.storeName }}</span>
+              <span class="si-name">{{ s.storeName }}
+                <span v-if="s.isFavorite" class="src-tag fav">★ 收藏</span>
+                <span v-else class="src-tag city">城市</span>
+              </span>
               <span class="si-addr">{{ s.address || '' }}</span>
             </button>
           </div>
@@ -316,6 +325,23 @@
           <div class="detail-story">{{ detail.story }}</div>
           <div class="detail-extra" v-if="detail.extra">{{ detail.extra }}</div>
           <button class="btn-ghost" @click="modal = null">关闭</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：重置确认 ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'reset'">
+        <div class="modal panel confirm-modal">
+          <div class="panel-title">重置全部进度</div>
+          <div class="confirm-text">
+            此操作将清空所有记录——军团单位、打卡地、据点攻略、建设进度与动物图鉴，<strong>无法恢复</strong>。
+            确定要从头开始吗？
+          </div>
+          <div class="confirm-actions">
+            <button class="btn-ghost" @click="modal = null">取消</button>
+            <button class="btn-danger" @click="doReset">确认重置</button>
+          </div>
         </div>
       </div>
     </transition>

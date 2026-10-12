@@ -162,6 +162,23 @@ createApp({
       } catch (e) { showToast(e.message); }
     }
 
+    /* ---------- 重置进度 ---------- */
+    async function doReset() {
+      try {
+        await api("/api/reset", {});
+        modal.value = null;
+        showEnding.value = false;
+        battle.value.key = null;
+        codexTab.value = "animals";
+        mapIndex.value = 0;
+        await refresh();
+        await loadCodex();
+        mapIndex.value = state.value.strongholds.findIndex((s) => s.key === state.value.frontier);
+        if (mapIndex.value < 0) mapIndex.value = 0;
+        showToast("进度已重置，一切从头开始");
+      } catch (e) { showToast(e.message); }
+    }
+
     /* ---------- 攻略 ---------- */
     const currentSh = computed(() => state.value.strongholds[mapIndex.value] ?? null);
 
@@ -331,7 +348,8 @@ createApp({
     }
 
     /* ---------- 杂项 ---------- */
-    const empirePct = computed(() => (state.value.empire.built / state.value.empire.total) * 100);
+    const conqueredPct = computed(() => (state.value.empire.conquered / state.value.empire.total) * 100);
+    const builtPct = computed(() => (state.value.empire.built / state.value.empire.total) * 100);
     const endingText = computed(() => codex.value.world?.ending ?? "");
     const strongholds = computed(() => state.value.strongholds);
     const tabs = [
@@ -351,8 +369,8 @@ createApp({
       state, codex, stores, currentSh, shStatus, shAsset, damageStages, shiftStronghold,
       enterBattle, quitBattle, battle, battleUnits, battleArmyPower, battleImage, canAttack, startAttack, battleLogEl,
       buildSites, buildSteps, buildStepName, openDispatch, doDispatch, chooseGeneral, myGenerals,
-      unitGroups, showUnit, showAnimal, doCheckin, openStores, doClockin, doOrders, doEncounter,
-      fmtNum, asset, avatarUrl, unitName, empirePct, endingText, strongholds,
+      unitGroups, showUnit, showAnimal, doCheckin, openStores, doClockin, doOrders, doEncounter, doReset,
+      fmtNum, asset, avatarUrl, unitName, conqueredPct, builtPct, endingText, strongholds,
     };
   },
 }).mount("#app");

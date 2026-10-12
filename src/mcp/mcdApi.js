@@ -167,27 +167,31 @@ export class McdApi {
   /**
    * 打卡候选门店列表。
    * 合并两路真实数据以增加打卡多样性：
-   *   - 收藏餐厅（searchType=1）
-   *   - 城市关键词搜索（searchType=2）
+   *   - 收藏餐厅（searchType=1，标记 isFavorite=true）
+   *   - 城市关键词搜索（searchType=2，标记 isFavorite=false）
    * 两路都查，按 storeCode 合并去重（同一门店在两路都出现时保留收藏来源），
    * 收藏门店排在前面。只有当两路都为空时才抛错。
-   * @returns {Promise<{mode: string, stores: Array<{storeCode, storeName, address}>}>}
+   * @returns {Promise<{mode: string, stores: Array<{storeCode, storeName, address, isFavorite}>}>}
    */
   async getStores() {
     if (this.mode !== "online") {
       return {
         mode: "offline",
-        stores: MOCK.stores.map((s) => ({ ...s })),
+        // 演示模式：第一家视作「收藏」，其余视作城市搜索，便于展示来源标识
+        stores: MOCK.stores.map((s, i) => ({ ...s, isFavorite: i === 0 })),
       };
     }
     // 顺序执行两路查询，避免 MCP 流式传输并发冲突
-    const fav = await this._queryStores({ beType: 1, searchType: 1 });
-    const city = await this._queryStores({
+    const fav = (await this._queryStores({ beType: 1, searchType: 1 })).map((s) => ({
+      ...s,
+      isFavorite: true,
+    }));
+    const city = (await this._queryStores({
       beType: 1,
       searchType: 2,
       city: this.city,
       keyword: this.keyword,
-    });
+    })).map((s) => ({ ...s, isFavorite: false }));
     const stores = mergeStores(fav, city);
     if (stores.length === 0) throw new Error("未查询到附近门店");
     return { mode: "online", stores };

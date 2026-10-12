@@ -129,6 +129,21 @@ body::after {
 }
 .mode-badge.offline { border-color: rgba(255, 197, 61, 0.5); color: var(--gold); background: rgba(255, 197, 61, 0.1); }
 
+/* 顶栏重置按钮 */
+.hud-reset {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  color: var(--text-dim);
+  background: var(--cyan-soft);
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.hud-reset svg { width: 16px; height: 16px; }
+.hud-reset:hover { color: #ff8a8a; border-color: rgba(255, 120, 120, 0.6); background: rgba(255, 90, 90, 0.14); box-shadow: 0 0 12px rgba(255, 90, 90, 0.28); }
+
 /* ---------------- 主体 ---------------- */
 .hud-main { flex: 1; padding: 12px 12px 90px; }
 
@@ -173,17 +188,28 @@ body::after {
 .empire-stat .num { font-family: var(--font-num); font-size: 24px; font-weight: 700; color: var(--cyan); text-shadow: 0 0 8px rgba(77, 219, 255, 0.7); }
 .empire-stat .den { font-size: 11px; color: var(--text-dim); }
 .empire-stat small { display: block; font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.empire-stat.built .num { color: var(--gold); text-shadow: 0 0 8px rgba(255, 197, 61, 0.75); }
 .empire-bar {
+  position: relative;
   flex: 1; height: 10px; border-radius: 6px;
   background: rgba(77, 219, 255, 0.1);
   border: 1px solid rgba(77, 219, 255, 0.25);
   overflow: hidden;
 }
 .empire-bar i {
-  display: block; height: 100%;
-  background: linear-gradient(90deg, #1b7fb8, var(--cyan));
-  box-shadow: 0 0 10px rgba(77, 219, 255, 0.8);
+  position: absolute; left: 0; top: 0;
+  display: block; height: 100%; border-radius: 6px;
   transition: width 0.5s ease;
+}
+/* 已攻略：青色段（已攻克、尚未建成） */
+.empire-bar .bar-conq {
+  background: linear-gradient(90deg, rgba(27, 127, 184, 0.85), rgba(77, 219, 255, 0.92));
+  box-shadow: 0 0 10px rgba(77, 219, 255, 0.5);
+}
+/* 已建成：金色段（金拱点亮），覆盖在已攻略之内 */
+.empire-bar .bar-built {
+  background: linear-gradient(90deg, #ffcf4d, #ffb300);
+  box-shadow: 0 0 12px rgba(255, 197, 61, 0.85);
 }
 .empire-tip { margin-top: 8px; font-size: 12px; color: var(--gold); text-align: center; }
 
@@ -363,6 +389,24 @@ body::after {
 }
 .btn-ghost:hover { background: var(--cyan-soft); border-color: var(--cyan); }
 
+/* 危险按钮（重置确认） */
+.btn-danger {
+  padding: 7px 18px; border-radius: 8px; cursor: pointer; flex: 0 0 auto;
+  color: #ffe3e3; font-size: 12px; letter-spacing: 2px; font-weight: 700; font-family: inherit;
+  background: linear-gradient(135deg, #ff7676, #e23b3b);
+  border: 1px solid rgba(255, 120, 120, 0.7);
+  box-shadow: 0 0 14px rgba(226, 59, 59, 0.5);
+  transition: all 0.15s ease;
+}
+.btn-danger:hover { transform: translateY(-1px); box-shadow: 0 0 22px rgba(226, 59, 59, 0.8); }
+.btn-danger:active { transform: scale(0.97); }
+
+/* 重置确认弹窗 */
+.confirm-modal { text-align: center; }
+.confirm-text { font-size: 13px; line-height: 1.7; color: var(--text); margin: 6px 2px 16px; }
+.confirm-text strong { color: #ff8a8a; }
+.confirm-actions { display: flex; gap: 10px; justify-content: center; }
+
 /* ---------------- 攻略场景 ---------------- */
 .battle-layer {
   position: fixed; inset: 0; z-index: 100;
@@ -441,8 +485,12 @@ body::after {
   transition: all 0.15s ease;
 }
 .store-item:hover { border-color: var(--cyan); background: rgba(77, 219, 255, 0.14); box-shadow: 0 0 12px rgba(77, 219, 255, 0.25); }
-.si-name { font-size: 13px; letter-spacing: 0.5px; }
+.si-name { font-size: 13px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .si-addr { font-size: 10px; color: var(--text-dim); }
+/* 门店来源标识：收藏 / 城市 */
+.src-tag { font-size: 9px; line-height: 1; padding: 2px 6px; border-radius: 20px; letter-spacing: 0.5px; white-space: nowrap; }
+.src-tag.fav { color: var(--gold); border: 1px solid rgba(255, 197, 61, 0.5); background: rgba(255, 197, 61, 0.12); }
+.src-tag.city { color: var(--text-dim); border: 1px solid rgba(150, 180, 210, 0.28); background: rgba(150, 180, 210, 0.08); }
 
 .detail-modal { text-align: center; }
 /* 立绘区可被压缩（最小 84px）：矮/窄窗口下优先缩小立绘，保证故事完整显示不出滚动条 */
