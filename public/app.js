@@ -19,6 +19,7 @@ createApp({
     const mapIndex = ref(0);
     const modal = ref(null);
     const detail = ref(null);
+    const gain = ref(null); // { title, subtitle, items: [{name,count,power,asset,assetAlt,story,extra,order}] }
     const toast = ref("");
     const showEnding = ref(false);
     let toastTimer = null;
@@ -81,6 +82,12 @@ createApp({
       toastTimer = setTimeout(() => (toast.value = ""), ms);
     }
 
+    /** 打开「收获弹窗」：展示获得的物品（立绘/数量/战力/介绍） */
+    function showGain(title, subtitle, items) {
+      gain.value = { title, subtitle, items };
+      modal.value = "gain";
+    }
+
     /* ---------- 数据加载 ---------- */
     async function refresh() {
       const prevDone = state.value.empire.done;
@@ -109,6 +116,18 @@ createApp({
       await Promise.all([refresh(), loadCodex()]);
       // 轻量轮询：捕捉跨日与外部变化
       setInterval(refresh, 60000);
+      // 首次使用：静默 IP 定位填充默认城市（失败不打扰，用服务端默认城市）
+      if (!localStorage.getItem("mcm.city")) {
+        try {
+          const r = await api("/api/locate", {});
+          if (r.city) {
+            city.value = r.city;
+            localStorage.setItem("mcm.city", r.city);
+          }
+        } catch {
+          /* 定位失败时保持默认城市 */
+        }
+      }
     });
 
     onUnmounted(() => window.removeEventListener("keydown", onKeydown));
@@ -117,26 +136,64 @@ createApp({
     async function doCheckin() {
       try {
         const r = await api("/api/checkin", {});
-        showToast(`签到成功：麦麦粉 ×${r.gained.count}`);
         await refresh();
+        showGain("签到收获", "明天再来", r.items);
       } catch (e) { showToast(e.message); }
+    }
+
+    /* ---------- 打卡城市（MCP 仅支持按城市搜索，IP 定位 + 手动切换） ---------- */
+    const city = ref(localStorage.getItem("mcm.city") || "");
+    const cityInput = ref("");
+    const cityPickerOpen = ref(false);
+    const locating = ref(false);
+    const hotCities = ["北京", "上海", "广州", "深圳", "成都", "杭州", "武汉", "西安", "南京", "苏州", "重庆", "天津", "长沙", "郑州", "青岛", "厦门"];
+
+    async function reloadStores() {
+      const q = city.value ? `?city=${encodeURIComponent(city.value)}` : "";
+      const r = await api("/api/stores" + q);
+      stores.value = r.stores;
     }
 
     async function openStores() {
       try {
-        const r = await api("/api/stores");
-        stores.value = r.stores;
+        await reloadStores();
         modal.value = "stores";
+      } catch (e) { showToast(e.message); }
+    }
+
+    async function locateCity() {
+      locating.value = true;
+      try {
+        const r = await api("/api/locate", {});
+        if (!r.city) { showToast("定位失败，请手动选择城市"); return; }
+        city.value = r.city;
+        localStorage.setItem("mcm.city", r.city);
+        await reloadStores();
+        showToast(`已定位到${r.city}，门店列表已更新`);
+      } catch (e) {
+        showToast("定位失败，请手动选择城市");
+      } finally {
+        locating.value = false;
+      }
+    }
+
+    async function switchCity(c) {
+      c = (c || "").trim();
+      if (!c) { showToast("请输入城市名"); return; }
+      city.value = c;
+      localStorage.setItem("mcm.city", c);
+      cityInput.value = "";
+      cityPickerOpen.value = false;
+      try {
+        await reloadStores();
       } catch (e) { showToast(e.message); }
     }
 
     async function doClockin(storeCode) {
       try {
         const r = await api("/api/clockin", { storeCode });
-        const g = r.gotGeneral ? `麦麦将军「${r.store.storeName}」×1 + ` : "";
-        showToast(`打卡成功：${g}麦麦军 ×${r.gained.juns}`);
-        modal.value = null;
         await refresh();
+        showGain("打卡收获", r.store.storeName, r.items);
       } catch (e) { showToast(e.message); }
     }
 
@@ -146,19 +203,18 @@ createApp({
         if (!r.gained.length) {
           showToast(r.orderCount ? "今日订单奖励已领取" : "今天还没有订单，先去享用一餐吧");
         } else {
-          const names = r.gained.map((g) => unitName(g.warriorKey)).join("、");
-          showToast(`今日 ${r.orderCount} 单订单 → 美食战士：${names}`);
+          await refresh();
+          showGain("今日订单奖励", `共 ${r.orderCount} 笔订单`, r.items);
         }
-        await refresh();
       } catch (e) { showToast(e.message); }
     }
 
     async function doEncounter() {
       try {
         const r = await api("/api/encounter", {});
-        showToast(`偶遇成功：${unitName(r.gained.key)}（仅今天有效）`);
         await refresh();
         await loadCodex();
+        showGain("偶遇", "今日限定", r.items);
       } catch (e) { showToast(e.message); }
     }
 
@@ -365,11 +421,12 @@ createApp({
     ];
 
     return {
-      tab, tabs, codexTabs, codexTab, mapIndex, modal, detail, toast, showEnding,
+      tab, tabs, codexTabs, codexTab, mapIndex, modal, detail, gain, toast, showEnding,
       state, codex, stores, currentSh, shStatus, shAsset, damageStages, shiftStronghold,
       enterBattle, quitBattle, battle, battleUnits, battleArmyPower, battleImage, canAttack, startAttack, battleLogEl,
       buildSites, buildSteps, buildStepName, openDispatch, doDispatch, chooseGeneral, myGenerals,
       unitGroups, showUnit, showAnimal, doCheckin, openStores, doClockin, doOrders, doEncounter, doReset,
+      city, cityInput, cityPickerOpen, locating, hotCities, locateCity, switchCity,
       fmtNum, asset, avatarUrl, unitName, conqueredPct, builtPct, endingText, strongholds,
     };
   },

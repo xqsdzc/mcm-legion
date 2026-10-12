@@ -608,3 +608,76 @@ body::after {
 .battle-sh-art .unit-glow {
   background: radial-gradient(ellipse, rgba(23, 46, 78, 0.22), transparent 70%);
 }
+
+/* ============================================================
+   打卡城市栏（MCP 仅支持按城市搜索：IP 定位 + 常用城市 + 手输）
+   ============================================================ */
+.city-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin: 2px 0 8px; font-size: 12px; color: var(--text-dim);
+}
+.city-cur strong { color: var(--cyan); font-weight: 600; letter-spacing: 1px; }
+.btn-mini {
+  font-family: inherit; font-size: 11px; letter-spacing: 1px;
+  color: var(--cyan); background: var(--cyan-soft);
+  border: 1px solid var(--panel-line); border-radius: 14px;
+  padding: 3px 10px; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-mini:hover:not(:disabled) { border-color: var(--cyan); box-shadow: 0 0 10px rgba(77, 219, 255, 0.35); }
+.btn-mini:disabled { opacity: 0.5; cursor: not-allowed; }
+.city-picker {
+  border: 1px solid var(--panel-line); border-radius: var(--radius);
+  background: rgba(6, 18, 36, 0.6);
+  padding: 10px; margin-bottom: 8px;
+}
+.city-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.city-chip {
+  font-family: inherit; font-size: 12px;
+  color: var(--text-dim); background: none;
+  border: 1px solid rgba(77, 219, 255, 0.2); border-radius: 12px;
+  padding: 3px 11px; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.city-chip:hover { color: var(--text); border-color: var(--cyan-dim); }
+.city-chip.on { color: #06283d; background: var(--cyan); border-color: var(--cyan); font-weight: 700; }
+.city-input-row { display: flex; gap: 8px; margin-top: 9px; }
+.city-input-row input {
+  flex: 1; min-width: 0;
+  font-family: inherit; font-size: 12px; letter-spacing: 1px;
+  color: var(--text); background: rgba(4, 12, 24, 0.8);
+  border: 1px solid var(--panel-line); border-radius: 14px;
+  padding: 5px 12px; outline: none;
+}
+.city-input-row input:focus { border-color: var(--cyan); }
+.city-input-row input::placeholder { color: rgba(217, 242, 255, 0.35); }
+
+/* ============================================================
+   收获弹窗（签到 / 偶遇 / 今日订单 / 打卡）
+   ============================================================ */
+.gain-modal { max-width: 460px; }
+.gain-list {
+  max-height: 52vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  margin: 4px 2px 14px;
+}
+.gain-item { display: flex; gap: 12px; align-items: flex-start; text-align: left; }
+.gain-item .unit-art { flex: 0 0 84px; width: 84px; height: 84px; }
+.gain-info { flex: 1; min-width: 0; }
+.gain-name { font-size: 14px; font-weight: 700; color: #eafaff; letter-spacing: 1px; }
+.gain-count { font-family: var(--font-num); color: var(--gold); margin-left: 4px; }
+.gain-power { font-family: var(--font-num); font-size: 11px; color: var(--gold); margin: 2px 0 4px; }
+.gain-story {
+  font-size: 11px; line-height: 1.65; color: rgba(217, 242, 255, 0.78);
+  text-align: justify; white-space: pre-line;
+}
+.gain-extra { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+.gain-order {
+  font-size: 10px; color: var(--cyan-dim); margin-top: 4px;
+  border-left: 2px solid var(--cyan-dim); padding-left: 6px; line-height: 1.5;
+}
+@media (max-height: 560px) {
+  .gain-list { max-height: 42vh; }
+  .gain-item .unit-art { flex-basis: 64px; width: 64px; height: 64px; }
+  .gain-story { font-size: 10px; line-height: 1.5; }
+}

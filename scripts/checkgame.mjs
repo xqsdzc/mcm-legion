@@ -77,14 +77,14 @@ console.log("\n[1] 每日行动限制");
   ok(err !== null, "偶遇一天一次");
   ok(ANIMAL_KEYS.includes(seen1), "偶遇获得动物");
 
-  // 同一天再次 encounter 报错；新的一天再 encounter：旧动物离队，
-  // 且因日期确定性，得到的应是同一只动物
+  // 同一天再次 encounter 报错；新的一天再 encounter：旧动物离队。
+  // 偶遇为真随机（避免同一天反复体验总是同一只）：跨天后可能重逢，也可能是新动物
   nextDay(store);
   const before = store.getUnitCount("animal", seen1);
   engine.encounter();
   const after = store.getDaily(engine.getState().date, "encounter").detail;
-  ok(before === 1 && after === seen1, "偶遇按日期确定性可复现（同一动物）");
-  ok(store.getUnitCount("animal", seen1) === 1, "动物不叠加，跨天后重新偶遇");
+  ok(before === 1 && ANIMAL_KEYS.includes(after), "偶遇每日重置（旧动物离队，当天可再偶遇）");
+  ok(store.getUnitCount("animal", seen1) === (after === seen1 ? 1 : 0), "动物不叠加，跨天后重新偶遇");
   store.close();
 }
 

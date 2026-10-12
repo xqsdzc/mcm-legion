@@ -1,7 +1,10 @@
 /**
  * 带种子的伪随机数（mulberry32）。
- * 同一日期 + 同一序号 → 结果固定，保证「每日偶遇/订单奖励」可复现、可测试。
+ * 同一日期 + 同一序号 → 结果固定，保证「订单奖励」可复现、可测试：
+ * 订单奖励按 orderId 抽取，重复领取时只发放新订单，确定性即幂等。
  */
+
+import { randomInt } from "node:crypto";
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -38,4 +41,14 @@ export function dailyRandom(dateStr, purpose, index = 0) {
 /** 从数组中按确定性随机取一个 */
 export function pickDaily(dateStr, purpose, index, arr) {
   return arr[Math.floor(dailyRandom(dateStr, purpose, index) * arr.length) % arr.length];
+}
+
+/**
+ * 真随机取一个（用于每日偶遇）。
+ * 偶遇每天只能触发一次，但玩家可能重置进度后反复体验——
+ * 用日期做种子会导致同一天永远遇到同一只动物，故改为真随机。
+ */
+export function pickRandom(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) throw new Error("pickRandom: 数组为空");
+  return arr[randomInt(arr.length)];
 }

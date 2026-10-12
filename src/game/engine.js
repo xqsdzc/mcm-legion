@@ -6,7 +6,7 @@
  */
 import { UNITS, ANIMALS, STRONGHOLDS, WARRIOR_KEYS, ANIMAL_KEYS, BATTLE, DAILY, BUILD_RULES } from "./config.js";
 import { CHARACTERS, ANIMALS as ANIMAL_STORY, STRONGHOLDS as SH_STORY, DAMAGE, BUILD, WORLD } from "./story.js";
-import { pickDaily } from "./rng.js";
+import { pickDaily, pickRandom } from "./rng.js";
 import { todayStr, nowLocalStr } from "../mcp/mcdApi.js";
 
 const TOTAL_STRONGHOLDS = STRONGHOLDS.length;
@@ -159,12 +159,27 @@ export class LegionEngine {
     }
     this.store.addUnit("fan", "fan", "", DAILY.checkinFans);
     this.store.markDaily(today, "checkin", `麦麦粉 x${DAILY.checkinFans}`);
-    return { gained: { key: "fan", count: DAILY.checkinFans } };
+    const def = UNITS.fan;
+    return {
+      gained: { key: "fan", count: DAILY.checkinFans },
+      items: [
+        {
+          type: def.type,
+          key: "fan",
+          name: def.name,
+          count: DAILY.checkinFans,
+          power: def.power,
+          asset: def.asset,
+          assetAlt: def.altAsset,
+          story: CHARACTERS.fan.story,
+        },
+      ],
+    };
   }
 
-  /** 打卡候选门店（来自 MCP 或演示数据） */
-  async clockinStores() {
-    return this.mcp.getStores();
+  /** 打卡候选门店（来自 MCP 或演示数据）；city 可覆盖默认城市 */
+  async clockinStores(city) {
+    return this.mcp.getStores(city ? { city } : {});
   }
 
   /**
@@ -194,6 +209,30 @@ export class LegionEngine {
     this.store.addUnit("jun", "jun", "", DAILY.clockinJuns);
     this.store.recordClockin(store.storeCode, today, gotGeneral);
 
+    // 收获弹窗用的物品介绍
+    const items = [];
+    if (gotGeneral) {
+      items.push({
+        type: "general",
+        key: "general",
+        name: store.storeName,
+        count: DAILY.clockinGeneral,
+        power: UNITS.general.power,
+        asset: UNITS.general.asset,
+        story: CHARACTERS.general.story,
+        extra: `以「${store.storeName}」之名加入军团，攻略战斗中免疫损失`,
+      });
+    }
+    items.push({
+      type: "jun",
+      key: "jun",
+      name: UNITS.jun.name,
+      count: DAILY.clockinJuns,
+      power: UNITS.jun.power,
+      asset: UNITS.jun.asset,
+      story: CHARACTERS.jun.story,
+    });
+
     return {
       mode,
       store,
@@ -202,6 +241,7 @@ export class LegionEngine {
         generals: gotGeneral ? [{ name: store.storeName, count: 1 }] : [],
         juns: DAILY.clockinJuns,
       },
+      items,
     };
   }
 
@@ -233,21 +273,50 @@ export class LegionEngine {
     if (fresh.length > 0 || !log) {
       this.store.markDaily(today, "order", JSON.stringify({ rewarded }));
     }
-    return { mode, orderCount: orders.length, gained: gains };
+    // 收获弹窗用的物品介绍（含订单来源）
+    const items = gains.map((g) => {
+      const def = UNITS[g.warriorKey];
+      return {
+        type: "warrior",
+        key: g.warriorKey,
+        name: def.name,
+        count: 1,
+        power: def.power,
+        asset: def.asset,
+        story: CHARACTERS[g.warriorKey].story,
+        order: g.order,
+      };
+    });
+    return { mode, orderCount: orders.length, gained: gains, items };
   }
 
-  /** 偶遇：每日一次，获得一只仅今天存在的小动物 */
+  /** 偶遇：每日一次，获得一只仅今天存在的小动物（真随机，同一天重开也可能是不同动物） */
   encounter() {
     this.rollover();
     const today = todayStr();
     if (this.store.getDaily(today, "encounter")) {
       throw new Error("今天已经偶遇过小动物了，明天再来");
     }
-    const animalKey = pickDaily(today, "encounter", 0, ANIMAL_KEYS);
+    const animalKey = pickRandom(ANIMAL_KEYS);
     this.store.addUnit("animal", animalKey, "", DAILY.encounterAnimals);
     this.store.markAnimalSeen(animalKey, today);
     this.store.markDaily(today, "encounter", animalKey);
-    return { gained: { key: animalKey, count: DAILY.encounterAnimals } };
+    const def = ANIMALS[animalKey];
+    return {
+      gained: { key: animalKey, count: DAILY.encounterAnimals },
+      items: [
+        {
+          type: "animal",
+          key: animalKey,
+          name: def.name,
+          count: DAILY.encounterAnimals,
+          power: def.power,
+          asset: def.asset,
+          story: ANIMAL_STORY[animalKey].story,
+          extra: "小动物只存在于偶遇当天，图鉴永久记录",
+        },
+      ],
+    };
   }
 
   /* ================= 攻略 ================= */

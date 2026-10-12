@@ -171,9 +171,10 @@ export class McdApi {
    *   - 城市关键词搜索（searchType=2，标记 isFavorite=false）
    * 两路都查，按 storeCode 合并去重（同一门店在两路都出现时保留收藏来源），
    * 收藏门店排在前面。只有当两路都为空时才抛错。
+   * @param {{city?: string}} [opts] city 可覆盖默认城市（MCP 的 searchType=2 必须指定城市）
    * @returns {Promise<{mode: string, stores: Array<{storeCode, storeName, address, isFavorite}>}>}
    */
-  async getStores() {
+  async getStores({ city } = {}) {
     if (this.mode !== "online") {
       return {
         mode: "offline",
@@ -186,13 +187,13 @@ export class McdApi {
       ...s,
       isFavorite: true,
     }));
-    const city = (await this._queryStores({
+    const cityStores = (await this._queryStores({
       beType: 1,
       searchType: 2,
-      city: this.city,
+      city: city || this.city,
       keyword: this.keyword,
     })).map((s) => ({ ...s, isFavorite: false }));
-    const stores = mergeStores(fav, city);
+    const stores = mergeStores(fav, cityStores);
     if (stores.length === 0) throw new Error("未查询到附近门店");
     return { mode: "online", stores };
   }

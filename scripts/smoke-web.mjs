@@ -80,9 +80,11 @@ await page.screenshot({ path: join(SHOTS, "02-clockin.png") });
 const clockinBtn = page.locator(".store-item").first();
 await clockinBtn.click();
 await page.waitForTimeout(800);
-// 打卡成功会自动关闭弹层；失败（如今日已打卡）则手动关闭
+// 打卡成功会弹出「收获」弹层；失败（如今日已打卡）则手动关闭
 if (await page.locator(".modal-layer").count()) {
-  await page.locator(".modal-layer .btn-ghost").last().click();
+  const gainBtn = page.locator(".modal-layer .gain-modal .btn-primary");
+  if (await gainBtn.count()) await gainBtn.click();
+  else await page.locator(".modal-layer .btn-ghost").last().click();
   await page.waitForTimeout(300);
 }
 

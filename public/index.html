@@ -282,6 +282,20 @@
       <div class="modal-layer" v-if="modal === 'stores'">
         <div class="modal panel">
           <div class="panel-title">选择打卡门店 <span class="panel-sub">同一门店每天限一次</span></div>
+          <div class="city-bar">
+            <span class="city-cur">当前城市：<strong>{{ city || '默认' }}</strong></span>
+            <button class="btn-mini" @click="locateCity" :disabled="locating">{{ locating ? '定位中…' : '📍 定位' }}</button>
+            <button class="btn-mini" @click="cityPickerOpen = !cityPickerOpen">{{ cityPickerOpen ? '收起' : '切换城市' }}</button>
+          </div>
+          <div class="city-picker" v-if="cityPickerOpen">
+            <div class="city-chips">
+              <button v-for="c in hotCities" :key="c" class="city-chip" :class="{ on: c === city }" @click="switchCity(c)">{{ c }}</button>
+            </div>
+            <div class="city-input-row">
+              <input v-model.trim="cityInput" placeholder="输入城市名，如：苏州" @keyup.enter="switchCity(cityInput)" />
+              <button class="btn-mini" @click="switchCity(cityInput)">确定</button>
+            </div>
+          </div>
           <div class="store-list">
             <button v-for="s in stores" :key="s.storeCode" class="store-item" @click="doClockin(s.storeCode)">
               <span class="si-name">{{ s.storeName }}
@@ -325,6 +339,31 @@
           <div class="detail-story">{{ detail.story }}</div>
           <div class="detail-extra" v-if="detail.extra">{{ detail.extra }}</div>
           <button class="btn-ghost" @click="modal = null">关闭</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：收获（签到/偶遇/订单/打卡） ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'gain'">
+        <div class="modal panel gain-modal" v-if="gain">
+          <div class="panel-title">{{ gain.title }}<span class="panel-sub" v-if="gain.subtitle">{{ gain.subtitle }}</span></div>
+          <div class="gain-list">
+            <div class="gain-item" v-for="(it, i) in gain.items" :key="i">
+              <div class="unit-art">
+                <img :src="asset(it.asset)" :alt="it.name" loading="lazy" />
+                <span class="unit-glow"></span>
+              </div>
+              <div class="gain-info">
+                <div class="gain-name">{{ it.name }} <span class="gain-count">×{{ it.count }}</span></div>
+                <div class="gain-power">战力 {{ it.power }}<template v-if="it.count > 1"> · 合计 {{ it.power * it.count }}</template></div>
+                <div class="gain-story">{{ it.story }}</div>
+                <div class="gain-extra" v-if="it.extra">{{ it.extra }}</div>
+                <div class="gain-order" v-if="it.order">来自订单：{{ it.order.storeName }}<template v-if="it.order.products && it.order.products.length">（{{ it.order.products.join('、') }}）</template></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-primary" @click="modal = null">收下</button>
         </div>
       </div>
     </transition>

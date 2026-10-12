@@ -121,18 +121,38 @@ const routes = {
   "GET /api/state": async () => engine.getState(),
   "GET /api/codex": async () => engine.codex(),
   "GET /api/battles": async () => engine.battles(),
-  "GET /api/stores": async () => engine.clockinStores(),
+  "GET /api/stores": async (url) => engine.clockinStores(url.searchParams.get("city") || undefined),
   "POST /api/checkin": async () => engine.checkin(),
   "POST /api/clockin": async (_q, body) => engine.clockin(body.storeCode),
   "POST /api/orders": async () => engine.claimOrders(),
   "POST /api/encounter": async () => engine.encounter(),
   "POST /api/attack": async (_q, body) => engine.attack(body.key),
   "POST /api/build": async (_q, body) => engine.dispatchBuild(body.key, body.generalName ?? ""),
+  "POST /api/locate": async () => locateCity(),
   "POST /api/reset": async () => {
     engine.reset();
     return { ok: true };
   },
 };
+
+/**
+ * IP 定位：解析用户当前所在城市（供打卡门店搜索使用）。
+ * 麦当劳 MCP 的 query-nearby-stores 只支持「城市 + 关键词」，
+ * 拿不到经纬度，所以用 IP 定位反推城市，再由用户确认/切换。
+ * 返回形如：{ city: "苏州", raw: "中国 江苏 苏州 移动" }
+ */
+async function locateCity() {
+  const res = await fetch("https://myip.ipip.net", { signal: AbortSignal.timeout(6000) });
+  const text = await res.text();
+  // 形如：当前 IP：2409:...  来自于：中国 江苏 苏州  移动
+  const m = text.match(/来自于：(.+)/);
+  const parts = (m?.[1] ?? "").trim().split(/\s+/);
+  // [国家, 省/直辖市, 城市, 运营商…]；直辖市形如「中国 北京 北京」
+  let city = parts[2] ?? "";
+  if (!city && parts[1]) city = parts[1]; // 兜底：只有省级信息时用省名
+  city = city.replace(/市$/, "");
+  return { city, raw: (m?.[1] ?? "").trim() };
+}
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
