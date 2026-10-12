@@ -91,18 +91,18 @@ export const UNITS = {
   },
 };
 
-/** 十只偶遇动物：仅当天有效，战力当天计入军团 */
+/** 十只偶遇动物：仅当天有效，战力当天计入军团（title 为每只动物的专属名字） */
 export const ANIMALS = {
-  husky: { type: "animal", name: "哈士奇", power: 120, tier: 2, asset: "animals/husky.png" },
-  samoyed: { type: "animal", name: "萨摩耶", power: 110, tier: 2, asset: "animals/samoyed.png" },
-  golden: { type: "animal", name: "金毛", power: 100, tier: 2, asset: "animals/golden.png" },
-  corgi: { type: "animal", name: "柯基", power: 90, tier: 1, asset: "animals/corgi.png" },
-  shiba: { type: "animal", name: "柴犬", power: 85, tier: 1, asset: "animals/shiba.png" },
-  orange: { type: "animal", name: "橘猫", power: 130, tier: 2, asset: "animals/orange.png" },
-  calico: { type: "animal", name: "奶牛猫", power: 95, tier: 1, asset: "animals/calico.png" },
-  tabby: { type: "animal", name: "灰虎斑", power: 80, tier: 1, asset: "animals/tabby.png" },
-  white: { type: "animal", name: "白猫", power: 105, tier: 2, asset: "animals/white.png" },
-  black: { type: "animal", name: "黑猫", power: 140, tier: 3, asset: "animals/black.png" },
+  husky: { type: "animal", name: "哈士奇", title: "白围巾", power: 120, tier: 2, asset: "animals/husky.png" },
+  samoyed: { type: "animal", name: "萨摩耶", title: "月牙", power: 110, tier: 2, asset: "animals/samoyed.png" },
+  golden: { type: "animal", name: "金毛", title: "老接", power: 100, tier: 2, asset: "animals/golden.png" },
+  corgi: { type: "animal", name: "柯基", title: "贴地飞", power: 90, tier: 1, asset: "animals/corgi.png" },
+  shiba: { type: "animal", name: "柴犬", title: "守锅", power: 85, tier: 1, asset: "animals/shiba.png" },
+  orange: { type: "animal", name: "橘猫", title: "落日", power: 130, tier: 2, asset: "animals/orange.png" },
+  calico: { type: "animal", name: "奶牛猫", title: "补丁", power: 95, tier: 1, asset: "animals/calico.png" },
+  tabby: { type: "animal", name: "灰虎斑", title: "活地图", power: 80, tier: 1, asset: "animals/tabby.png" },
+  white: { type: "animal", name: "白猫", title: "信纸", power: 105, tier: 2, asset: "animals/white.png" },
+  black: { type: "animal", name: "黑猫", title: "夜巡", power: 140, tier: 3, asset: "animals/black.png" },
 };
 
 /**

@@ -51,7 +51,8 @@ export class LegionEngine {
       return {
         type: u.type,
         key: u.key,
-        name: u.name,
+        // 动物用专属名字（title）作展示名，品种名走 def.name
+        name: def?.type === "animal" ? (def.title ?? u.name) : u.name,
         count: u.count,
         unitPower: def?.power ?? 0,
         power: (def?.power ?? 0) * u.count,
@@ -322,7 +323,8 @@ export class LegionEngine {
         {
           type: "animal",
           key: animalKey,
-          name: def.name,
+          name: def.title ?? def.name,
+          sub: def.name,
           count: DAILY.encounterAnimals,
           power: def.power,
           asset: def.asset,
@@ -553,7 +555,8 @@ export class LegionEngine {
       const s = seen.get(k);
       return {
         key: k,
-        name: ANIMALS[k].name,
+        name: ANIMALS[k].title ?? ANIMALS[k].name,
+        species: ANIMALS[k].name,
         asset: ANIMALS[k].asset,
         power: ANIMALS[k].power,
         story: ANIMAL_STORY[k].story,

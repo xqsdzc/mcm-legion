@@ -98,12 +98,11 @@ body::after {
 .arch-logo {
   width: 34px; height: 34px;
   display: grid; place-items: center;
-  font-weight: 900; font-size: 20px; color: #06121f;
-  background: linear-gradient(135deg, #ffe27a, #ffb300);
   border-radius: 8px;
-  box-shadow: 0 0 14px rgba(255, 197, 61, 0.55);
-  text-shadow: none;
+  background: radial-gradient(circle at 50% 30%, rgba(77, 219, 255, 0.16), rgba(8, 22, 42, 0.9) 70%);
+  box-shadow: 0 0 14px rgba(255, 197, 61, 0.35), inset 0 0 8px rgba(77, 219, 255, 0.25);
 }
+.arch-logo svg { width: 30px; height: 30px; display: block; filter: drop-shadow(0 0 6px rgba(255, 197, 61, 0.5)); }
 
 .hud-title { display: flex; flex-direction: column; line-height: 1.1; }
 .hud-title strong { font-size: 17px; letter-spacing: 2px; color: #eafaff; }
@@ -241,6 +240,18 @@ body::after {
 .card-row::-webkit-scrollbar { height: 4px; }
 .card-row::-webkit-scrollbar-thumb { background: rgba(77, 219, 255, 0.3); border-radius: 2px; }
 
+/* 动物图鉴网格：一行 4 个，10 只分三行 */
+.codex-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 4px 2px 8px;
+}
+.codex-grid .unit-card { width: auto; min-width: 0; padding: 8px 4px 7px; }
+.codex-grid .unit-art { height: 58px; }
+.codex-grid .unit-art img { max-height: 58px; }
+.codex-grid .unit-name { font-size: 11px; letter-spacing: 0; }
+
 .unit-card {
   flex: 0 0 auto;
   width: 104px;
@@ -270,6 +281,7 @@ body::after {
 }
 
 .unit-name { font-size: 11px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unit-species { font-size: 9px; color: var(--text-dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .unit-meta { display: flex; justify-content: space-between; align-items: baseline; margin-top: 3px; padding: 0 2px; }
 .unit-count { font-family: var(--font-num); font-size: 12px; color: var(--gold); }
 .unit-power { font-family: var(--font-num); font-size: 10px; color: var(--cyan-dim); }
@@ -548,7 +560,7 @@ body::after {
 .hud-nav button.on .nav-icon { filter: drop-shadow(0 0 8px rgba(77, 219, 255, 0.9)); transform: translateY(-1px); }
 .nav-icon { font-size: 19px; transition: all 0.15s ease; }
 .nav-icon svg { width: 22px; height: 22px; display: block; }
-.nav-label { font-size: 10px; letter-spacing: 2px; }
+.nav-label { font-size: 10px; letter-spacing: 1px; }
 
 /* ---------------- toast ---------------- */
 .toast {
@@ -681,6 +693,7 @@ body::after {
 .gain-info { flex: 1; min-width: 0; }
 .gain-name { font-size: 14px; font-weight: 700; color: #eafaff; letter-spacing: 1px; }
 .gain-count { font-family: var(--font-num); color: var(--gold); margin-left: 4px; }
+.gain-species { font-size: 10px; color: var(--text-dim); margin: 1px 0 2px; }
 .gain-power { font-family: var(--font-num); font-size: 11px; color: var(--gold); margin: 2px 0 4px; }
 .gain-story {
   font-size: 11px; line-height: 1.65; color: rgba(217, 242, 255, 0.78);

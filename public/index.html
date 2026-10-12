@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>麦麦军团 · MCM Legion</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🍔</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 2.5 41.5 8.6v14.2c0 10.6-7.4 18-17.5 22.7C13.9 40.8 6.5 33.4 6.5 22.8V8.6L24 2.5z' fill='%23081220' stroke='%23ffb300' stroke-width='3' stroke-linejoin='round'/%3E%3Cpath d='M14.5 31.5V22a4.9 4.9 0 0 1 9.8 0v9.5M33.5 31.5V22a4.9 4.9 0 0 0-9.8 0v9.5' stroke='%23ffc94d' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/style.css" />
   <script src="/vendor/vue.global.prod.js"></script>
 </head>
@@ -13,7 +13,19 @@
     <!-- 顶栏 HUD -->
     <header class="hud-top">
       <div class="hud-brand">
-        <span class="arch-logo">M</span>
+        <span class="arch-logo" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none">
+            <defs>
+              <linearGradient id="logoGold" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffe27a" />
+                <stop offset="1" stop-color="#ffb300" />
+              </linearGradient>
+            </defs>
+            <path d="M24 2.5 41.5 8.6v14.2c0 10.6-7.4 18-17.5 22.7C13.9 40.8 6.5 33.4 6.5 22.8V8.6L24 2.5z" fill="rgba(6,18,32,.92)" stroke="url(#logoGold)" stroke-width="2.6" stroke-linejoin="round"/>
+            <path d="M14.5 31.5V22a4.9 4.9 0 0 1 9.8 0v9.5M33.5 31.5V22a4.9 4.9 0 0 0-9.8 0v9.5" stroke="url(#logoGold)" stroke-width="3.6" stroke-linecap="round"/>
+            <path d="M24 7.4l1.5 3 3 1.5-3 1.5-1.5 3-1.5-3-3-1.5 3-1.5 1.5-3z" fill="#7fe6ff"/>
+          </svg>
+        </span>
         <div class="hud-title">
           <strong>麦麦军团</strong>
           <small>MCM LEGION</small>
@@ -68,7 +80,7 @@
             </button>
             <button class="action-btn" @click="doOrders">
               <span class="a-icon" v-html="ACTION_ICONS.orders"></span><span class="a-name">今日订单</span>
-              <span class="a-desc">订单换战士</span>
+              <span class="a-desc">召唤美食战士</span>
             </button>
             <button class="action-btn" :class="{ done: state.daily.encounter }" @click="doEncounter">
               <span class="a-icon" v-html="ACTION_ICONS.encounter"></span><span class="a-name">偶遇</span>
@@ -194,7 +206,7 @@
         <template v-if="codexTab === 'animals'">
           <div class="panel">
             <div class="panel-title">动物图鉴 <span class="panel-sub">{{ codex.animals.filter(a => a.discovered).length }}/{{ codex.animals.length }}</span></div>
-            <div class="card-row">
+            <div class="codex-grid">
               <div class="unit-card" v-for="a in codex.animals" :key="a.key"
                    :class="{ locked: !a.discovered }" @click="showAnimal(a)">
                 <div class="unit-art">
@@ -203,6 +215,7 @@
                   <span v-if="!a.discovered" class="lock-mask">未偶遇</span>
                 </div>
                 <div class="unit-name">{{ a.name }}</div>
+                <div class="unit-species">{{ a.species }}</div>
                 <div class="unit-meta"><span class="unit-power">{{ a.power }}</span></div>
               </div>
             </div>
@@ -378,6 +391,7 @@
               </div>
               <div class="gain-info">
                 <div class="gain-name">{{ it.name }} <span class="gain-count">×{{ it.count }}</span></div>
+                <div class="gain-species" v-if="it.sub">{{ it.sub }}</div>
                 <div class="gain-power">战力 {{ it.power }}<template v-if="it.count > 1"> · 合计 {{ it.power * it.count }}</template></div>
                 <div class="gain-story">{{ it.story }}</div>
                 <div class="gain-extra" v-if="it.extra">{{ it.extra }}</div>

@@ -261,10 +261,10 @@ createApp({
         const r = await api("/api/orders", {});
         if (!r.gained.length) {
           queueAchievements(r.achievements);
-          showToast(r.orderCount ? "今日订单奖励已领取" : "今天还没有订单，先去享用一餐吧");
+          showToast(r.orderCount ? "订单奖励已领取" : "今天还没有订单，先去享用一餐吧");
         } else {
           await refresh();
-          showGain("今日订单奖励", `共 ${r.orderCount} 笔订单`, r.items);
+          showGain("订单奖励", `共 ${r.orderCount} 笔订单`, r.items);
           queueAchievements(r.achievements);
         }
       } catch (e) { showToast(e.message); }
@@ -436,7 +436,7 @@ createApp({
     const unitGroups = computed(() => {
       const groups = [
         { title: "麦麦军团", note: "签到 · 打卡收集", types: ["fan", "jun", "general"] },
-        { title: "美食战士", note: "今日订单奖励", types: ["warrior"] },
+        { title: "美食战士", note: "订单奖励", types: ["warrior"] },
         { title: "今日偶遇动物", note: "仅今天有效", types: ["animal"] },
       ];
       return groups.map((g) => ({
@@ -456,7 +456,9 @@ createApp({
         power: u.power,
         assetUrl: asset(u.asset || (u.def && u.def.asset)),
         story: story ? story.story : "",
-        extra: u.type === "animal" ? "小动物只存在于偶遇当天" : null,
+        extra: u.type === "animal"
+          ? `${u.def?.name ?? ""} · 小动物只存在于偶遇当天`
+          : null,
       };
       modal.value = "unit";
     }
@@ -467,7 +469,9 @@ createApp({
         power: a.power,
         assetUrl: asset(a.asset),
         story: a.story,
-        extra: a.discovered ? `首次偶遇 ${a.firstSeen} · 累计 ${a.seenCount} 次` : "尚未偶遇过它",
+        extra: a.discovered
+          ? `${a.species} · 首次偶遇 ${a.firstSeen} · 累计 ${a.seenCount} 次`
+          : `${a.species} · 尚未偶遇过它`,
       };
       modal.value = "animal";
     }
