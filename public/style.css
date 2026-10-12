@@ -348,6 +348,7 @@ body::after {
   border: none;
   box-shadow: 0 0 16px rgba(77, 219, 255, 0.55), inset 0 0 8px rgba(255, 255, 255, 0.35);
   transition: all 0.15s ease;
+  flex: 0 0 auto;
 }
 .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 24px rgba(77, 219, 255, 0.85); }
 .btn-primary:active:not(:disabled) { transform: scale(0.97); }
@@ -358,6 +359,7 @@ body::after {
   background: transparent; border: 1px solid var(--panel-line);
   color: var(--cyan); font-size: 12px; letter-spacing: 2px; font-family: inherit;
   transition: all 0.15s ease;
+  flex: 0 0 auto;
 }
 .btn-ghost:hover { background: var(--cyan-soft); border-color: var(--cyan); }
 
@@ -417,13 +419,20 @@ body::after {
 .modal-layer {
   position: fixed; inset: 0; z-index: 200;
   background: rgba(2, 6, 14, 0.82);
-  display: grid; place-items: center; padding: 20px;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
   backdrop-filter: blur(4px);
 }
-.modal { width: 100%; max-width: 420px; max-height: 82vh; overflow-y: auto; }
+/* 弹层本体不滚动：内部区域（门店列表/故事正文）自行滚动，
+   避免内容自适应高度下 Chrome 必然出现的 1px 幻影滚动条 */
+.modal {
+  width: 100%; max-width: 560px;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
 
 /* 列表自身成为滚动容器：门店/将军较多时在弹层内滚动，不撑高整个弹层 */
-.store-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 52vh; overflow-y: auto; padding-right: 2px; }
+.store-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
 .store-item {
   display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
   padding: 11px 13px; border-radius: 8px; cursor: pointer; text-align: left;
@@ -436,16 +445,26 @@ body::after {
 .si-addr { font-size: 10px; color: var(--text-dim); }
 
 .detail-modal { text-align: center; }
-.detail-art { position: relative; height: 170px; display: grid; place-items: end center; }
-.detail-art img { max-height: 170px; max-width: 80%; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)); }
-.detail-art .unit-glow { width: 130px; height: 22px; bottom: 0; }
-.detail-name { font-size: 17px; letter-spacing: 2px; margin: 10px 0 4px; color: #eafaff; }
+/* 立绘区可被压缩（最小 84px）：矮/窄窗口下优先缩小立绘，保证故事完整显示不出滚动条 */
+.detail-art { position: relative; height: 185px; display: grid; place-items: end center; flex: 0 1 auto; min-height: 84px; overflow: hidden; }
+.detail-art img { max-height: 100%; max-width: 80%; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)); }
+.detail-art .unit-glow { width: 150px; height: 24px; bottom: 0; }
+.detail-name { font-size: 17px; letter-spacing: 2px; margin: 8px 0 2px; color: #eafaff; flex: 0 0 auto; }
 .detail-power { font-family: var(--font-num); font-size: 13px; color: var(--gold); margin-left: 8px; }
-.detail-story { font-size: 12px; line-height: 1.9; color: rgba(217, 242, 255, 0.82); text-align: justify; margin: 8px 2px 12px; white-space: pre-line; }
-.detail-extra { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; }
+.detail-story { font-size: 12px; line-height: 1.7; color: rgba(217, 242, 255, 0.82); text-align: justify; margin: 6px 2px 8px; white-space: pre-line; flex: 1 0 auto; min-height: 0; overflow-y: auto; }
+.detail-extra { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; flex: 0 0 auto; }
 
 .ending-modal { text-align: center; }
-.ending-text { font-size: 13px; line-height: 2; color: rgba(217, 242, 255, 0.85); text-align: justify; margin: 10px 2px 16px; white-space: pre-line; }
+.ending-text { font-size: 13px; line-height: 2; color: rgba(217, 242, 255, 0.85); text-align: justify; margin: 10px 2px 16px; white-space: pre-line; flex: 1 0 auto; min-height: 0; overflow-y: auto; }
+
+/* 矮屏（窗口高度 < 420px）进一步收紧详情弹层，保证立绘压缩后故事仍完整 */
+@media (max-height: 420px) {
+  .detail-art { min-height: 48px; }
+  .detail-name { font-size: 15px; margin: 6px 0 2px; }
+  .detail-story { font-size: 11px; line-height: 1.6; }
+  .detail-extra { margin-bottom: 6px; }
+  .detail-modal .btn-ghost { padding: 5px 14px; }
+}
 
 /* ---------------- 底部导航 ---------------- */
 .hud-nav {

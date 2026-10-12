@@ -1,5 +1,5 @@
 /* 麦麦军团 · 前端应用（Vue 3 全局构建，无外部网络依赖） */
-const { createApp, ref, computed, onMounted, nextTick } = Vue;
+const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
 
 const DAMAGE_NAMES = ["完好无损", "轻微损伤", "明显破损", "战火蔓延", "濒临崩塌", "完全损毁"];
 const BUILD_NAMES = ["夯土奠基", "立起钢骨", "封顶合围", "金拱就位", "香气调试", "盛大开业"];
@@ -97,11 +97,21 @@ createApp({
       codex.value = await api("/api/codex");
     }
 
+    /* ---------- Esc 关闭弹层 ---------- */
+    function onKeydown(e) {
+      if (e.key !== "Escape") return;
+      if (modal.value) { modal.value = null; return; }
+      if (showEnding.value) { showEnding.value = false; }
+    }
+
     onMounted(async () => {
+      window.addEventListener("keydown", onKeydown);
       await Promise.all([refresh(), loadCodex()]);
       // 轻量轮询：捕捉跨日与外部变化
       setInterval(refresh, 60000);
     });
+
+    onUnmounted(() => window.removeEventListener("keydown", onKeydown));
 
     /* ---------- 今日行动 ---------- */
     async function doCheckin() {
@@ -296,7 +306,9 @@ createApp({
 
     /* ---------- 详情 ---------- */
     function showUnit(u) {
-      const story = codex.value.characters.find((c) => c.key === u.key);
+      // 角色查 characters；动物（今日偶遇）回落到 animals 图鉴取故事
+      const story = codex.value.characters.find((c) => c.key === u.key)
+        || (u.type === "animal" ? codex.value.animals.find((c) => c.key === u.key) : null);
       detail.value = {
         name: u.name || (story ? story.name : u.key),
         power: u.power,
