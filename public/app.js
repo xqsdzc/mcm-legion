@@ -46,7 +46,9 @@ createApp({
 
     const emptyState = () => ({
       date: "", player: null, mcp: { mode: "offline" }, army: { detail: [], byType: {}, total: 0, vulnerable: 0 },
-      frontier: null, daily: { checkin: false, encounter: false, order: { claimed: false }, dispatch: false },
+      frontier: null,
+      daily: { checkin: false, encounter: false, order: { claimed: false }, dispatch: false,
+               clockin: { done: 0, limit: 3 } },
       strongholds: [], empire: { conquered: 0, built: 0, total: 9, done: false }, animalsToday: [],
       achievements: { unlocked: 0, total: 20, items: [] },
     });
@@ -214,6 +216,7 @@ createApp({
 
     async function openStores() {
       try {
+        await refresh();       // 先拉最新状态，保证「今日 x/3」进度准确
         await reloadStores();
         modal.value = "stores";
       } catch (e) { showToast(e.message); }
@@ -502,6 +505,9 @@ createApp({
     const builtPct = computed(() => (state.value.empire.built / state.value.empire.total) * 100);
     const endingText = computed(() => codex.value.world?.ending ?? "");
     const strongholds = computed(() => state.value.strongholds);
+    // 今日打卡进度：daily.clockin 可能缺失（旧存档/加载中），兜底 0/3
+    const clockinDone = computed(() => state.value.daily?.clockin?.done ?? 0);
+    const clockinLimit = computed(() => state.value.daily?.clockin?.limit ?? 3);
     const tabs = [
       { key: "legion", name: "军团", icon: NAV_ICONS.legion },
       { key: "map", name: "地图", icon: NAV_ICONS.map },
@@ -524,7 +530,7 @@ createApp({
       unitGroups, showUnit, showAnimal, doCheckin, openStores, doClockin, doOrders, doEncounter, doReset,
       city, cityInput, cityPickerOpen, locating, hotCities, locateCity, switchCity,
       fmtNum, asset, avatarUrl, unitName, unitLabel, closeGain, showNextAchv, showAchvDetail, pendingWorld,
-      ACTION_ICONS, conqueredPct, builtPct, endingText, strongholds,
+      ACTION_ICONS, conqueredPct, builtPct, endingText, strongholds, clockinDone, clockinLimit,
     };
   },
 }).mount("#app");

@@ -18,6 +18,7 @@ export const DAILY = {
   clockinJuns: 3,          // 打卡：麦麦军 x3
   clockinGeneral: 1,       // 打卡：麦麦将军 x1（首次且未拥有该店将军时）
   encounterAnimals: 1,     // 偶遇：动物 x1（仅当天有效）
+  clockinPerDay: 3,        // 打卡：每天最多 3 次（不同门店；同一门店一天仍限一次）
 };
 
 /** 建设规则 */

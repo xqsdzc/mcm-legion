@@ -212,7 +212,7 @@
                 <div class="unit-art">
                   <img :src="`/assets/${a.asset}`" :class="{ blurred: !a.discovered }" :alt="a.name" loading="lazy" />
                   <span class="unit-glow"></span>
-                  <span v-if="!a.discovered" class="lock-mask">未偶遇</span>
+                  <span v-if="!a.discovered" class="lock-mask"><i>未偶遇</i></span>
                 </div>
                 <div class="unit-name">{{ a.name }}</div>
                 <div class="unit-species">{{ a.species }}</div>
@@ -314,7 +314,9 @@
     <transition name="fade">
       <div class="modal-layer" v-if="modal === 'stores'">
         <div class="modal panel">
-          <div class="panel-title">选择打卡门店 <span class="panel-sub">同一门店每天限一次</span></div>
+          <div class="panel-title">选择打卡门店
+            <span class="panel-sub">今日 {{ clockinDone }}/{{ clockinLimit }} · 同一门店限一次</span>
+          </div>
           <div class="city-bar">
             <span class="city-cur">当前城市：<strong>{{ city || '默认' }}</strong></span>
             <button class="btn-mini" @click="locateCity" :disabled="locating">
@@ -332,7 +334,8 @@
             </div>
           </div>
           <div class="store-list">
-            <button v-for="s in stores" :key="s.storeCode" class="store-item" @click="doClockin(s)">
+            <button v-for="s in stores" :key="s.storeCode" class="store-item"
+                    :disabled="clockinDone >= clockinLimit" @click="doClockin(s)">
               <span class="si-name">{{ s.storeName }}
                 <span v-if="s.isFavorite" class="src-tag fav">★ 收藏</span>
                 <span v-else class="src-tag city">城市</span>

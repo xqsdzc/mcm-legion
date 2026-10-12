@@ -301,4 +301,18 @@ export class LocalSqliteStore {
       .run(key, at);
     return r.changes > 0;
   }
+
+  /**
+   * 成就 key 改名后迁移已解锁记录。
+   * 若新 key 已存在（后来又重新解锁过），删除旧 key 行以免重复计数。
+   */
+  renameAchievementKey(from, to) {
+    if (!this.hasAchievement(from)) return false;
+    if (this.hasAchievement(to)) {
+      this.db.prepare("DELETE FROM achievements WHERE key = ?").run(from);
+      return false;
+    }
+    this.db.prepare("UPDATE achievements SET key = ? WHERE key = ?").run(to, from);
+    return true;
+  }
 }

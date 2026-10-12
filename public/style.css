@@ -264,7 +264,11 @@ body::after {
   transition: all 0.15s ease;
 }
 .unit-card:hover { border-color: var(--cyan); box-shadow: 0 0 14px rgba(77, 219, 255, 0.35); transform: translateY(-2px); }
-.unit-card.locked { opacity: 0.75; cursor: default; }
+/* 未收集：不整体降透明度（否则「未偶遇」标签一起被压暗看不清），只弱化文字信息 */
+.unit-card.locked { cursor: default; }
+.unit-card.locked .unit-name,
+.unit-card.locked .unit-species,
+.unit-card.locked .unit-meta { opacity: 0.55; }
 .unit-card.locked:hover { border-color: rgba(77, 219, 255, 0.28); box-shadow: none; transform: none; }
 
 .unit-art { position: relative; height: 74px; display: grid; place-items: end center; }
@@ -278,7 +282,15 @@ body::after {
 }
 .lock-mask {
   position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: 10px; color: var(--text-dim); letter-spacing: 2px;
+  font-size: 10px; letter-spacing: 2px; pointer-events: none;
+  /* 立绘被提到 z-index:1（见「图像浮于浅色衬底之上」），标签须再高一层才可见 */
+  z-index: 2;
+}
+/* 卡片衬底为浅色画框，浅色文字会隐形：改用深色胶囊标签保证可读 */
+.lock-mask i {
+  font-style: normal; font-weight: 700; color: #eaf7ff; background: rgba(6, 18, 34, 0.92);
+  border: 1px solid rgba(77, 219, 255, 0.5); border-radius: 12px;
+  padding: 2px 9px; line-height: 1.6; letter-spacing: 1px;
 }
 
 .unit-name { font-size: 11px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -511,6 +523,9 @@ body::after {
   transition: all 0.15s ease;
 }
 .store-item:hover { border-color: var(--cyan); background: rgba(77, 219, 255, 0.14); box-shadow: 0 0 12px rgba(77, 219, 255, 0.25); }
+/* 今日打卡已达上限（3 次）：列表置灰、不可点击 */
+.store-item:disabled { opacity: 0.45; cursor: default; }
+.store-item:disabled:hover { border-color: rgba(77, 219, 255, 0.22); background: rgba(77, 219, 255, 0.06); box-shadow: none; }
 .si-name { font-size: 13px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .si-addr { font-size: 10px; color: var(--text-dim); }
 /* 门店来源标识：收藏 / 城市 */

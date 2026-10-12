@@ -24,6 +24,8 @@ export class LegionEngine {
     store.ensureStrongholds(STRONGHOLDS.map((s) => s.key));
     // 自愈历史数据：合并同一只动物的重复/别名行（见 LocalSqliteStore#normalizeAnimals）
     store.normalizeAnimals();
+    // 成就 key 改名后保留玩家已解锁记录：warriors_9 → warriors_8（游戏实际只有 8 种战士）
+    store.renameAchievementKey("warriors_9", "warriors_8");
   }
 
   /* ================= 基础状态 ================= */
@@ -143,6 +145,7 @@ export class LegionEngine {
         encounter: Boolean(dailyMap.encounter),
         order: orderInfo,
         dispatch: Boolean(dailyMap.dispatch),
+        clockin: { done: this.clockinCount(today), limit: DAILY.clockinPerDay },
       },
       strongholds,
       empire: {
@@ -197,8 +200,15 @@ export class LegionEngine {
     return this.mcp.getStores(city ? { city } : {});
   }
 
+  /** 今日已打卡门店数（不同门店计次） */
+  clockinCount(today = todayStr()) {
+    return this.store.db
+      .prepare("SELECT COUNT(*) AS n FROM clockin_log WHERE date = ?")
+      .get(today).n;
+  }
+
   /**
-   * 打卡：同一门店一天一次。
+   * 打卡：每天最多 3 次，且同一门店一天一次。
    * 首次打卡且未拥有该店将军 → 获得该店麦麦将军 x1 + 麦麦军 x3；
    * 已拥有该店将军 → 仅获得麦麦军 x3。
    *
@@ -210,6 +220,14 @@ export class LegionEngine {
   async clockin(storeCode, city, storeInfo) {
     this.rollover();
     const today = todayStr();
+
+    // 每日次数上限：纯本地计数，先判，能省掉一次 MCP 回查
+    const done = this.clockinCount(today);
+    if (done >= DAILY.clockinPerDay) {
+      throw new Error(
+        `今天已经打卡 ${done} 家门店（每日上限 ${DAILY.clockinPerDay} 次），明天再来吧`
+      );
+    }
     let mode = this.mcp.mode ?? "online";
     let store =
       storeInfo && String(storeInfo.storeCode) === String(storeCode) ? storeInfo : null;
@@ -223,7 +241,7 @@ export class LegionEngine {
     const clocked = this.store.db
       .prepare("SELECT 1 FROM clockin_log WHERE date = ? AND store_code = ?")
       .get(today, storeCode);
-    if (clocked) throw new Error(`「${store.storeName}」今天已经打卡过了`);
+    if (clocked) throw new Error(`「${store.storeName}」今天已经打卡过了，换一家门店试试`);
 
     this.store.upsertStore(store);
     const existing = this.store.getStore(store.storeCode);
@@ -263,6 +281,7 @@ export class LegionEngine {
       mode,
       store,
       gotGeneral,
+      clockin: { done: done + 1, limit: DAILY.clockinPerDay },
       gained: {
         generals: gotGeneral ? [{ name: store.storeName, count: 1 }] : [],
         juns: DAILY.clockinJuns,
@@ -674,7 +693,7 @@ export class LegionEngine {
     stores_5: (s) => s.storeCount >= 5,
     stores_20: (s) => s.storeCount >= 20,
     first_order: (s) => s.firstOrder,
-    warriors_9: (s) => s.warriors >= 8,
+    warriors_8: (s) => s.warriors >= 8,
     first_encounter: (s) => s.animalsSeen >= 1,
     animals_10: (s) => s.animalsSeen >= 10,
     generals_5: (s) => s.generals >= 5,

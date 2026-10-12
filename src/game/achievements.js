@@ -92,7 +92,7 @@ export const ACHIEVEMENTS = [
     badge: badge("t1", `<path d="M7.4 3.6h5.4l3.6 3.6v13.2H7.4V3.6z"/><path d="M12.8 3.6V7.2h3.6"/><path d="M10.2 11.6v3M10.2 13h2M12.2 11.6v3M9.6 14.8l1.6 1.7 1.6-1.7"/>`),
   },
   {
-    key: "warriors_9",
+    key: "warriors_8",
     name: "美食全员",
     desc: "集齐 8 种美食战士",
     flavor: "八门八将，菜单就是花名册。",

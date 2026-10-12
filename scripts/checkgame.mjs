@@ -128,6 +128,27 @@ console.log("\n[2] 打卡规则");
   }
   ok(err2 === null && r4?.store?.storeName === other.storeName, "可用前端门店快照打卡（不依赖默认城市）");
   ok(store.getUnitCount("general", "general", other.storeName) === 1, "快照门店的将军同样入库");
+
+  // 每日打卡上限：同一天最多 3 次（当前已打 2 次：target + other）
+  ok(engine.clockinCount() === 2, "今日打卡计数为 2");
+  const third = { storeCode: "LIMIT-3", storeName: "第三家测试餐厅", address: "" };
+  const r5 = await engine.clockin(third.storeCode, "测试", third);
+  ok(r5.clockin.done === 3 && r5.clockin.limit === 3, "第 3 次打卡成功，返回进度 3/3");
+
+  let overErr = null;
+  const fourth = { storeCode: "LIMIT-4", storeName: "第四家测试餐厅", address: "" };
+  try {
+    await engine.clockin(fourth.storeCode, "测试", fourth);
+  } catch (e) { overErr = e; }
+  ok(overErr !== null && /上限/.test(overErr.message), "同一天第 4 次打卡被每日上限拦截");
+  // 前 5 次成功发放（3×5），被拦截的第 4 次不发放
+  ok(store.getUnitCount("jun", "jun") === 3 * 5, "被拦截的那次没有发放麦麦军（仍为 15）");
+
+  // 跨天后计数归零，可以重新打卡
+  nextDay(store);
+  ok(engine.clockinCount() === 0, "跨天后今日打卡计数归零");
+  const r6 = await engine.clockin(third.storeCode, "测试", third);
+  ok(r6.clockin.done === 1, "新的一天可以重新打卡");
   store.close();
 }
 
@@ -355,7 +376,10 @@ console.log("\n[8] 成就系统");
   ok(store.hasAchievement("first_order"), "首次领订单奖励解锁「第一桶金」");
 
   const { stores } = await engine.clockinStores();
-  for (let i = 0; i < 5; i++) await engine.clockin(stores[i].storeCode);
+  // 每日打卡上限 3 次，5 家门店需跨两天完成
+  for (let i = 0; i < 3; i++) await engine.clockin(stores[i].storeCode);
+  nextDay(store);
+  for (let i = 3; i < 5; i++) await engine.clockin(stores[i].storeCode);
   ok(store.hasAchievement("first_clockin"), "首次打卡解锁「第一站」");
   ok(store.hasAchievement("stores_5"), "5 家门店解锁「巡城麦客」");
   ok(store.hasAchievement("generals_5"), "同时 5 名将军解锁「五虎聚义」");
@@ -366,7 +390,7 @@ console.log("\n[8] 成就系统");
   // 集齐 8 种美食战士（战力随之破千）
   for (const k of WARRIOR_KEYS) grant(store, "warrior", k, 3);
   engine.checkAchievements();
-  ok(store.hasAchievement("warriors_9"), "集齐 8 种战士解锁「美食全员」");
+  ok(store.hasAchievement("warriors_8"), "集齐 8 种战士解锁「美食全员」");
   ok(store.hasAchievement("power_1000"), "战力破千解锁「千钧一发」");
   ok(store.hasAchievement("power_5000"), "战力破五千解锁「万夫莫开」");
 
