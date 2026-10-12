@@ -370,9 +370,11 @@ createApp({
       try {
         const r = await api("/api/attack", { key: sh.key });
         for (const st of r.stages) {
-          // 应用战损到本地编制
+          // 应用战损到本地编制（按存储名匹配：动物展示名是 title，与存储名 "" 不同）
           for (const lost of st.lost) {
-            const u = battleUnits.value.find((x) => x.key === lost.key && x.name === (lost.name || ""));
+            const u = battleUnits.value.find(
+              (x) => x.key === lost.key && (x.storeName ?? x.name) === lost.name
+            );
             if (u) u.count = Math.max(0, u.count - lost.count);
           }
           battleArmyPower.value = st.remainingPower;

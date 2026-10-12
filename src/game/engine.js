@@ -32,6 +32,9 @@ export class LegionEngine {
 
   /** 日期滚动：跨天后「仅当天存在」的动物离队 */
   rollover() {
+    // 自愈历史脏数据：同一只动物若存在重复/别名行，收敛为一行
+    // （老版本战斗结算会把展示名写进 units.name，导致一张卡片变两张）
+    this.store.normalizeAnimals();
     const today = todayStr();
     const player = this.store.getPlayer();
     if (player.updated_at?.slice(0, 10) !== today) {
@@ -57,6 +60,10 @@ export class LegionEngine {
         key: u.key,
         // 动物用专属名字（title）作展示名，品种名走 def.name
         name: def?.type === "animal" ? (def.title ?? u.name) : u.name,
+        // 存储名：写回数据库时的身份字段（units 主键含 name）。
+        // 动物的展示名是 title、存储名恒为 ""，两者必须区分开，
+        // 否则战斗结算写回时会 upsert 出一条 name=title 的新行，形成重复卡片。
+        storeName: u.name,
         count: u.count,
         unitPower: def?.power ?? 0,
         power: (def?.power ?? 0) * u.count,
@@ -453,8 +460,9 @@ export class LegionEngine {
     }
 
     // 工作副本：composite = type|key|name
+    // 注意用 storeName（存储名）而非展示名：动物展示名是 title，写回会多出一行
     const working = new Map();
-    for (const d of army.detail) working.set(`${d.type}|${d.key}|${d.name}`, d.count);
+    for (const d of army.detail) working.set(`${d.type}|${d.key}|${d.storeName}`, d.count);
 
     // 从当前损毁阶段继续：已损毁 damage 阶段，只需打完剩余阶段
     const startDamage = Math.min(row.damage, BATTLE.stages - 1);

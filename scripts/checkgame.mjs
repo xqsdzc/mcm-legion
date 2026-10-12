@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { LocalSqliteStore } from "../src/store/LocalSqliteStore.js";
 import { McdApi } from "../src/mcp/mcdApi.js";
 import { LegionEngine } from "../src/game/engine.js";
-import { STRONGHOLDS, WARRIOR_KEYS, ANIMAL_KEYS } from "../src/game/config.js";
+import { STRONGHOLDS, WARRIOR_KEYS, ANIMAL_KEYS, ANIMALS } from "../src/game/config.js";
 import { nowLocalStr } from "../src/mcp/mcdApi.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -329,6 +329,25 @@ console.log("\n[6c] 新引擎启动时自愈历史重复动物");
   );
   ok(engine2.army().detail.filter((u) => u.type === "animal").length === 1, "自愈后仅一张动物卡片");
   store2.close();
+}
+
+console.log("\n[6d] 攻略据点不会把当日动物复制成两只");
+{
+  const { store, engine } = freshEngine();
+  engine.encounter();
+  const animalKey = store.db.prepare("SELECT key FROM units WHERE type = 'animal'").get().key;
+  grant(store, "warrior", "warrior_bigmac", 40); // 足以通关第一个据点
+  const res = engine.attack(STRONGHOLDS[0].key);
+  ok(res.conquered, "据点已攻略（动物在队时出战）");
+
+  const rows = store.db.prepare("SELECT key, name, count FROM units WHERE type = 'animal'").all();
+  ok(rows.length === 1, "攻略后动物仍只有一行", `实际 ${rows.length} 行`);
+  ok(rows[0].name === "", "写回时用的仍是存储名 ''（不会写成展示名）");
+  const cards = engine.army().detail.filter((u) => u.type === "animal");
+  ok(cards.length === 1, "军团里只有 1 张动物卡片");
+  ok(cards[0].name === (ANIMALS[animalKey].title ?? ANIMALS[animalKey].name), "展示名仍为动物的专属名字");
+  ok(cards[0].count === 1, "动物战力未被战斗消耗（免疫战损）");
+  store.close();
 }
 
 console.log("\n[7] 全据点通关曲线（自然收入模拟）");
