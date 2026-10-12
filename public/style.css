@@ -558,3 +558,53 @@ body::after {
   #app { box-shadow: 0 0 60px rgba(0, 0, 0, 0.6); }
   body { padding: 0; }
 }
+
+/* ============================================================
+   抠图白边修复：人物/建筑图加浅色「画框」衬底
+   —— 透明 PNG 的白色残边在深色底上会形成一圈亮边、很扎眼；
+      在图像区后垫一层浅色渐变画框，白边融入浅底、边缘更干净，
+      同时在深色 HUD 中形成「收集卡插图」的层次感。
+   ============================================================ */
+.unit-art::before,
+.detail-art::before,
+.sh-art::before,
+.build-art::before,
+.battle-sh-art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, #f4f9fd 0%, #e2ecf6 55%, #d3e0ee 100%);
+  border-radius: 10px;
+  border: 1px solid rgba(120, 160, 200, 0.5);
+  box-shadow: inset 0 0 26px rgba(110, 150, 195, 0.28), 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+/* 图像浮于浅色衬底之上 */
+.unit-art img,
+.detail-art img,
+.sh-art img,
+.build-art img,
+.battle-sh-art img,
+.ruin-cell img {
+  position: relative;
+  z-index: 1;
+}
+/* 浅底上把立绘投影调淡、偏冷，融入画框 */
+.unit-art img,
+.detail-art img,
+.sh-art img,
+.build-art img,
+.battle-sh-art img {
+  filter: drop-shadow(0 6px 12px rgba(20, 45, 80, 0.28));
+}
+/* 损毁图鉴格子：图元自身衬浅底（每格尺寸一致，白边融入） */
+.ruin-cell img {
+  background: linear-gradient(180deg, #f4f9fd 0%, #e2ecf6 100%);
+  border-radius: 8px;
+}
+/* 浅色衬底上，把原来的青色地面辉光改为柔和投影，避免青光照在白底上发脏 */
+.unit-art .unit-glow,
+.detail-art .unit-glow,
+.battle-sh-art .unit-glow {
+  background: radial-gradient(ellipse, rgba(23, 46, 78, 0.22), transparent 70%);
+}
