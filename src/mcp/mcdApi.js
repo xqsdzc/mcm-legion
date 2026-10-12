@@ -76,6 +76,27 @@ function parseJsonText(text) {
   return tryFrom("{") ?? tryFrom("[");
 }
 
+/**
+ * 合并收藏与城市搜索两路门店，按 storeCode 去重。
+ * 收藏门店优先（两路都出现时保留收藏来源，且排在前面）；
+ * 城市搜索中重复出现的门店也会去重。
+ * @param {Array<{storeCode:string, storeName:string, address:string}>} fav
+ * @param {Array<{storeCode:string, storeName:string, address:string}>} city
+ * @returns {Array<{storeCode:string, storeName:string, address:string}>}
+ */
+function mergeStores(fav = [], city = []) {
+  const seen = new Set();
+  const out = [];
+  const pushUnique = (s) => {
+    if (seen.has(s.storeCode)) return;
+    seen.add(s.storeCode);
+    out.push(s);
+  };
+  fav.forEach(pushUnique);
+  city.forEach(pushUnique);
+  return out;
+}
+
 export class McdApi {
   /**
    * @param {{token?: string, city?: string, keyword?: string}} opts
@@ -145,7 +166,11 @@ export class McdApi {
 
   /**
    * 打卡候选门店列表。
-   * 优先取收藏餐厅（searchType=1），为空时按城市关键词搜索（searchType=2）。
+   * 合并两路真实数据以增加打卡多样性：
+   *   - 收藏餐厅（searchType=1）
+   *   - 城市关键词搜索（searchType=2）
+   * 两路都查，按 storeCode 合并去重（同一门店在两路都出现时保留收藏来源），
+   * 收藏门店排在前面。只有当两路都为空时才抛错。
    * @returns {Promise<{mode: string, stores: Array<{storeCode, storeName, address}>}>}
    */
   async getStores() {
@@ -155,17 +180,17 @@ export class McdApi {
         stores: MOCK.stores.map((s) => ({ ...s })),
       };
     }
-    let data = await this._queryStores({ beType: 1, searchType: 1 });
-    if (data.length === 0) {
-      data = await this._queryStores({
-        beType: 1,
-        searchType: 2,
-        city: this.city,
-        keyword: this.keyword,
-      });
-    }
-    if (data.length === 0) throw new Error("未查询到附近门店");
-    return { mode: "online", stores: data };
+    // 顺序执行两路查询，避免 MCP 流式传输并发冲突
+    const fav = await this._queryStores({ beType: 1, searchType: 1 });
+    const city = await this._queryStores({
+      beType: 1,
+      searchType: 2,
+      city: this.city,
+      keyword: this.keyword,
+    });
+    const stores = mergeStores(fav, city);
+    if (stores.length === 0) throw new Error("未查询到附近门店");
+    return { mode: "online", stores };
   }
 
   async _queryStores(args) {
