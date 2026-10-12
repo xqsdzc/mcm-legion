@@ -44,9 +44,10 @@ WorkBuddy 首先完成了三件事：
 | --- | --- |
 | `src/game/config.js` | 全部数值（战力曲线、战损率、每日限制、MOCK 门店） |
 | `src/game/story.js` | 全部剧情文案（11 角色列传、10 动物故事、9 据点志异） |
-| `src/game/rng.js` | mulberry32 + FNV hash 确定性随机 |
-| `src/game/engine.js` | 游戏引擎（约 560 行，所有规则在此实现） |
-| `src/store/LocalSqliteStore.js` | 存储层，8 张表全部读写 |
+| `src/game/rng.js` | mulberry32 + FNV hash 确定性随机（订单战士），以及 `crypto.randomInt` 真随机（偶遇动物、麦麦粉性别） |
+| `src/game/engine.js` | 游戏引擎（约 780 行，所有规则在此实现，含成就统计与判定） |
+| `src/game/achievements.js` | 20 枚成就定义与徽章 SVG |
+| `src/store/LocalSqliteStore.js` | 存储层，9 张表全部读写 |
 | `src/mcp/mcdApi.js` | MCP 客户端（两级门店降级 + 今日订单过滤） |
 
 ### 踩坑记录（都已修复并回归验证）
@@ -54,12 +55,14 @@ WorkBuddy 首先完成了三件事：
 1. **UTC 时间坑**：`toISOString()` 返回 UTC 日期，东八区傍晚后被算成"明天"，导致刚领取的偶遇动物立刻被跨日清理。修复：统一改用本地时间字符串 `nowLocalStr()`。
 2. **战损超标**：整数单位整体消耗导致 30% 目标实际扣了 63%。修复："就近逼近"算法——每消耗一个单位判断是否让总损失更接近目标，并保证至少损失最弱 1 个单位。
 3. **续攻重打**：攻略总是从第一阶段重新开始，`damage` 进度无意义。修复：从当前阶段续攻（`stagesToDo = 5 - damage`）。
-4. **难度曲线**：最初 9 天即可通关，后五据点形同虚设。修复随机种子口径后模拟得 15 天通关，据点 9 战力 2500 成为有挑战的终局目标。
+4. **难度曲线**：最初 9 天即可通关，后五据点形同虚设。修复随机种子口径后模拟得 13 天通关，据点 9 战力 2500 成为有挑战的终局目标。
+5. **偶遇动物重复**：`units` 主键是 `(type, key, name)`，历史版本把动物名写进 `name`，与当前写入的空串行并存，同一只动物被渲染成两张卡片。修复：写入前清空当天动物行（`replaceAnimalUnit`）+ 引擎启动时归一化历史数据（`normalizeAnimals`）。
+6. **跨城市打卡失败**：打卡只提交 `storeCode`，后端却用默认城市回查 MCP，切换城市后点击该城市门店必然报「没有找到该门店」。修复：前端连同城市与门店快照一起提交，后端直接使用列表里的门店。
 
 ### 质量保障
 
-- `scripts/checkgame.mjs`：52 项逻辑自检（每日限制/打卡规则/订单去重/五阶段续攻/建设消耗/跨日清理/15 天通关曲线模拟），全部通过；
-- `scripts/smoke-web.mjs`：Playwright 冒烟测试 11 项 + 15 张实机截图存档 `docs/screenshots/`。
+- `scripts/checkgame.mjs`：92 项逻辑自检（每日限制/打卡规则/订单去重/五阶段续攻/建设消耗/跨日清理/动物去重自愈/成就系统/13 天通关曲线模拟），全部通过；
+- `scripts/smoke-web.mjs`：Playwright 冒烟测试 14 项 + 实机截图存档 `docs/screenshots/`。
 
 ---
 
@@ -67,7 +70,7 @@ WorkBuddy 首先完成了三件事：
 
 - 使用 Vue 3 全局构建本地化（`public/vendor/vue.global.prod.js`），无外部网络依赖；
 - 视觉风格：经 ImageGen 生成三套候选（全息指挥地图/暖阳餐厅/童话绘本）后，用户选定**方案一：全息指挥地图**——深空蓝底 `#040b18` + 青色 `#4ddbff` HUD + 扫描线 + 面板四角括线；
-- 四大页签：军团 / 攻略 / 图鉴 / 战报；攻略页左侧军团卡片+战力、右侧据点图像+名称战力，左右箭头切换 9 个据点；
+- 五大页签：军团 / 地图 / 建造 / 图鉴 / 成就；地图页左侧军团卡片+战力、右侧据点图像+名称战力，左右箭头切换 9 个据点；
 - 攻略动画按 5 阶段逐段推进（每阶段约 1.15s），战斗日志带 `nextTick` 自动滚动。
 
 踩坑：Vue 3 模板 `ref` 名必须与 `setup()` 返回的变量名一致才能自动滚动（曾因 `battleLog` vs `battleLogEl` 不一致导致日志不滚动）。
@@ -93,5 +96,5 @@ WorkBuddy 首先完成了三件事：
 ## 六、当前状态与后续
 
 - 服务运行于 `http://localhost:3210`（后台任务，端口 3210）；
-- 数据文件 `data/mcd-army.db` 已 gitignore；
-- 待办：推送至 GitHub（需用户提供仓库地址；仓库已 git init 并完成首次提交 f2105cb）。
+- 数据文件 `data/mcm-legion.db` 已 gitignore（可用 `MCD_DB=data/test.db` 指定独立存档）；
+- 代码已推送至 GitHub：`xqsdzc/mcm-legion`（`master` 分支）。参赛前提是仓库设为 **Public**，需要在 GitHub 仓库 Settings 中确认。

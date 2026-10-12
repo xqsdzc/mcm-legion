@@ -573,6 +573,8 @@ body::after {
   box-shadow: 0 0 20px rgba(77, 219, 255, 0.45);
   max-width: 86%; text-align: center;
   line-height: 1.6;
+  /* 纯提示，不拦截点击：否则 toast（z-index 300）会盖住其下方弹层（z-index 200）的按钮 */
+  pointer-events: none;
 }
 
 /* ---------------- 过渡 ---------------- */
