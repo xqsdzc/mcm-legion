@@ -33,20 +33,47 @@ export function nowLocalStr(d = new Date()) {
 }
 
 /** 从 MCP 文本返回中提取 JSON */
+/**
+ * 从 MCP 工具返回的文本中提取 JSON。
+ *
+ * 麦当劳 MCP 的返回是「Markdown 前言 + JSON 正文」，前言里会出现 `data[]`
+ * 这类字样，直接找第一个 `[`/`{` 会切错位置。这里用括号配对扫描：
+ * 优先尝试以 `{` 开头的候选（业务响应都是对象），失败再试 `[`。
+ */
 function parseJsonText(text) {
   if (typeof text !== "string") return null;
-  const start = text.indexOf("{");
-  const startArr = text.indexOf("[");
-  let idx = -1;
-  if (start === -1) idx = startArr;
-  else if (startArr === -1) idx = start;
-  else idx = Math.min(start, startArr);
-  if (idx === -1) return null;
-  try {
-    return JSON.parse(text.slice(idx));
-  } catch {
+  const tryFrom = (open) => {
+    const n = text.length;
+    for (let i = 0; i < n; i++) {
+      if (text[i] !== open) continue;
+      let depth = 0;
+      let inStr = false;
+      let esc = false;
+      for (let j = i; j < n; j++) {
+        const c = text[j];
+        if (inStr) {
+          if (esc) esc = false;
+          else if (c === "\\") esc = true;
+          else if (c === '"') inStr = false;
+          continue;
+        }
+        if (c === '"') inStr = true;
+        else if (c === "{" || c === "[") depth++;
+        else if (c === "}" || c === "]") {
+          depth--;
+          if (depth === 0) {
+            try {
+              return JSON.parse(text.slice(i, j + 1));
+            } catch {
+              break; // 这一处不是完整 JSON，继续找下一个起点
+            }
+          }
+        }
+      }
+    }
     return null;
-  }
+  };
+  return tryFrom("{") ?? tryFrom("[");
 }
 
 export class McdApi {
