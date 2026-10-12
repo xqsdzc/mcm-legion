@@ -23,6 +23,24 @@
 
 html, body { height: 100%; }
 
+/* 页面不出现横向滚动条（横向滚动只允许发生在卡片行等内部容器） */
+html { overflow-x: hidden; }
+
+/* ---------------- 滚动条主题化（全息 HUD 风：细青色、无箭头按钮） ---------------- */
+* {
+  scrollbar-width: thin;                   /* Firefox */
+  scrollbar-color: rgba(77, 219, 255, 0.4) transparent;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(77, 219, 255, 0.35);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(77, 219, 255, 0.65); }
+::-webkit-scrollbar-button { display: none; }   /* 去掉两端箭头按钮 */
+::-webkit-scrollbar-corner { background: transparent; }
+
 body {
   background:
     radial-gradient(ellipse 90% 55% at 50% 0%, rgba(28, 84, 140, 0.35), transparent 70%),
@@ -404,7 +422,8 @@ body::after {
 }
 .modal { width: 100%; max-width: 420px; max-height: 82vh; overflow-y: auto; }
 
-.store-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+/* 列表自身成为滚动容器：门店/将军较多时在弹层内滚动，不撑高整个弹层 */
+.store-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 52vh; overflow-y: auto; padding-right: 2px; }
 .store-item {
   display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
   padding: 11px 13px; border-radius: 8px; cursor: pointer; text-align: left;
