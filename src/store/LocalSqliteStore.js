@@ -100,6 +100,59 @@ export class LocalSqliteStore {
     this.db.prepare("DELETE FROM units WHERE type = ?").run(type);
   }
 
+  /* ---------------- 偶遇动物（每天仅一只，按 key 唯一） ---------------- */
+
+  /**
+   * 写入今日偶遇动物：先清空所有动物行再写入，保证「每天只有一只」。
+   * units 主键为 (type, key, name)，若历史数据留下 name 非空的别名行，
+   * 直接 addUnit 会与 name='' 的新行并存，同一只动物被渲染成两张卡片。
+   */
+  replaceAnimalUnit(key, count = 1) {
+    this.db.exec("BEGIN");
+    try {
+      this.db.prepare("DELETE FROM units WHERE type = 'animal'").run();
+      this.db
+        .prepare("INSERT INTO units (type, key, name, count) VALUES ('animal', ?, '', ?)")
+        .run(key, count);
+      this.db.exec("COMMIT");
+    } catch (e) {
+      this.db.exec("ROLLBACK");
+      throw e;
+    }
+  }
+
+  /**
+   * 修复历史数据：把同一只动物（同 key）的重复行 / 别名行（name 非空）
+   * 合并为一行，name 统一为 ''。返回被修复的动物种类数。
+   */
+  normalizeAnimals() {
+    const rows = this.db
+      .prepare(
+        `SELECT key, MAX(count) AS count FROM units
+          WHERE type = 'animal'
+          GROUP BY key
+         HAVING COUNT(*) > 1 OR MAX(name) <> ''`
+      )
+      .all();
+    if (rows.length === 0) return 0;
+    this.db.exec("BEGIN");
+    try {
+      const del = this.db.prepare("DELETE FROM units WHERE type = 'animal' AND key = ?");
+      const ins = this.db.prepare(
+        "INSERT INTO units (type, key, name, count) VALUES ('animal', ?, '', ?)"
+      );
+      for (const r of rows) {
+        del.run(r.key);
+        ins.run(r.key, r.count > 0 ? r.count : 1);
+      }
+      this.db.exec("COMMIT");
+    } catch (e) {
+      this.db.exec("ROLLBACK");
+      throw e;
+    }
+    return rows.length;
+  }
+
   /* ---------------- 打卡地 ---------------- */
 
   upsertStore({ storeCode, storeName, address = "" }) {

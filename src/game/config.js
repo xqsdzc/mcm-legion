@@ -126,7 +126,7 @@ export const STRONGHOLDS = [
 export const CODEX = {
   animals: "动物图鉴",
   stores: "打卡地",
-  ruins: "据点损毁图鉴",
+  ruins: "据点图鉴",
 };
 
 /** 离线演示模式：未配置 MCD_MCP_TOKEN 时使用的示例数据 */

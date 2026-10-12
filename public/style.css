@@ -734,10 +734,11 @@ body::after {
   cursor: pointer; font-family: inherit;
   transition: all 0.15s ease;
 }
-.achv-cell:hover { border-color: var(--cyan-dim); background: rgba(77, 219, 255, 0.1); }
 .achv-cell.on { border-color: rgba(255, 197, 61, 0.4); background: rgba(255, 197, 61, 0.06); }
+.achv-cell.on:hover { border-color: var(--cyan-dim); background: rgba(77, 219, 255, 0.1); }
 .achv-cell.on .achv-badge { filter: drop-shadow(0 0 8px currentColor); }
-.achv-cell:not(.on) { opacity: 0.45; }
+/* 未解锁：不可点击，去掉指针与悬停反馈 */
+.achv-cell:not(.on) { opacity: 0.45; cursor: default; }
 .achv-cell:not(.on) .achv-badge { filter: grayscale(0.9); }
 .achv-cell:not(.on) .achv-name { color: var(--text-dim); }
 .achv-name {

@@ -247,9 +247,15 @@ createApp({
       } catch (e) { showToast(e.message); }
     }
 
-    async function doClockin(storeCode) {
+    async function doClockin(store) {
       try {
-        const r = await api("/api/clockin", { storeCode });
+        // 连同当前城市与门店快照一起提交：后端直接使用列表里的门店，
+        // 不再按默认城市回查 MCP（否则切换城市后点击门店会「找不到该门店」）
+        const r = await api("/api/clockin", {
+          storeCode: store.storeCode,
+          city: city.value || undefined,
+          store,
+        });
         await refresh();
         showGain("打卡收获", r.store.storeName, r.items);
         queueAchievements(r.achievements);
@@ -506,7 +512,7 @@ createApp({
     const codexTabs = [
       { key: "animals", name: "动物图鉴" },
       { key: "stores", name: "打卡地" },
-      { key: "ruins", name: "损毁图鉴" },
+      { key: "ruins", name: "据点图鉴" },
     ];
 
     return {

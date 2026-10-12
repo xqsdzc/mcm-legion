@@ -116,6 +116,18 @@ console.log("\n[2] 打卡规则");
   const r3 = await engine.clockin(target.storeCode);
   ok(r3.gotGeneral === false, "已拥有该店将军后，再打卡只得麦麦军");
   ok(store.getUnitCount("jun", "jun") === 3 + 3 + 3, "三次打卡共 9 麦麦军");
+
+  // 切换城市后，门店不在默认城市结果里：用前端传来的门店快照也应打卡成功
+  const other = { storeCode: "OTHER-CITY-1", storeName: "麦当劳(其他城市)测试餐厅", address: "测试路 1 号" };
+  let err2 = null;
+  let r4 = null;
+  try {
+    r4 = await engine.clockin(other.storeCode, "其他城市", other);
+  } catch (e) {
+    err2 = e;
+  }
+  ok(err2 === null && r4?.store?.storeName === other.storeName, "可用前端门店快照打卡（不依赖默认城市）");
+  ok(store.getUnitCount("general", "general", other.storeName) === 1, "快照门店的将军同样入库");
   store.close();
 }
 
@@ -242,6 +254,60 @@ console.log("\n[6] 跨日动物离队");
   const codex = engine.codex();
   ok(codex.animals.some((a) => a.discovered), "动物仍记录在图鉴中");
   store.close();
+}
+
+console.log("\n[6b] 偶遇动物每天仅一只（重复行自愈）");
+{
+  const { store, engine } = freshEngine();
+  engine.encounter();
+  let err = null;
+  try {
+    engine.encounter();
+  } catch (e) {
+    err = e;
+  }
+  ok(err !== null, "同一天只能偶遇一次");
+  const rows = store.db.prepare("SELECT * FROM units WHERE type = 'animal'").all();
+  ok(rows.length === 1, "units 中动物仅一行", `实际 ${rows.length} 行`);
+  ok(rows[0].name === "", "动物行 name 为空（不与别名行冲突）");
+
+  // 模拟历史遗留数据：同一只动物还存着一条 name 非空的别名行
+  store.db
+    .prepare("INSERT INTO units (type, key, name, count) VALUES ('animal', ?, '落日', 1)")
+    .run(rows[0].key);
+  ok(
+    store.db.prepare("SELECT COUNT(*) AS n FROM units WHERE type = 'animal'").get().n === 2,
+    "构造出重复的两行"
+  );
+  const armyDup = engine.army().detail.filter((u) => u.type === "animal");
+  ok(armyDup.length === 2, "修复前军团里会渲染成 2 张动物卡片");
+
+  const fixed = store.normalizeAnimals();
+  ok(fixed === 1, "normalizeAnimals 修复 1 种动物");
+  const after = store.db.prepare("SELECT * FROM units WHERE type = 'animal'").all();
+  ok(after.length === 1 && after[0].name === "", "重复行合并为一行且 name 统一为空");
+  ok(engine.army().detail.filter((u) => u.type === "animal").length === 1, "修复后军团里只有 1 张卡片");
+  store.close();
+}
+
+console.log("\n[6c] 新引擎启动时自愈历史重复动物");
+{
+  const { store, engine } = freshEngine();
+  engine.encounter();
+  const key = store.db.prepare("SELECT key FROM units WHERE type = 'animal'").get().key;
+  store.db
+    .prepare("INSERT INTO units (type, key, name, count) VALUES ('animal', ?, '别名', 1)")
+    .run(key);
+  store.close();
+  // 复用同一数据库文件新建引擎：构造函数应自动归一化
+  const store2 = new LocalSqliteStore(DB);
+  const engine2 = new LegionEngine(store2, new McdApi());
+  ok(
+    store2.db.prepare("SELECT COUNT(*) AS n FROM units WHERE type = 'animal'").get().n === 1,
+    "引擎启动时自动合并重复动物行"
+  );
+  ok(engine2.army().detail.filter((u) => u.type === "animal").length === 1, "自愈后仅一张动物卡片");
+  store2.close();
 }
 
 console.log("\n[7] 全据点通关曲线（自然收入模拟）");

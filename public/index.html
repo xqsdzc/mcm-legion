@@ -258,7 +258,7 @@
           <div class="panel-title">成就殿堂 <span class="panel-sub">已解锁 {{ state.achievements.unlocked }}/{{ state.achievements.total }}</span></div>
           <div class="achv-grid">
             <button v-for="a in state.achievements.items" :key="a.key" class="achv-cell"
-                    :class="{ on: a.unlocked }" @click="showAchvDetail(a)">
+                    :class="{ on: a.unlocked }" @click="a.unlocked && showAchvDetail(a)">
               <span class="achv-badge" :class="'t' + a.tier" v-html="a.badge"></span>
               <span class="achv-name">{{ a.unlocked ? a.name : '？？？' }}</span>
             </button>
@@ -332,7 +332,7 @@
             </div>
           </div>
           <div class="store-list">
-            <button v-for="s in stores" :key="s.storeCode" class="store-item" @click="doClockin(s.storeCode)">
+            <button v-for="s in stores" :key="s.storeCode" class="store-item" @click="doClockin(s)">
               <span class="si-name">{{ s.storeName }}
                 <span v-if="s.isFavorite" class="src-tag fav">★ 收藏</span>
                 <span v-else class="src-tag city">城市</span>

@@ -22,6 +22,8 @@ export class LegionEngine {
     this.mcp = mcp;
     store.ensurePlayer();
     store.ensureStrongholds(STRONGHOLDS.map((s) => s.key));
+    // 自愈历史数据：合并同一只动物的重复/别名行（见 LocalSqliteStore#normalizeAnimals）
+    store.normalizeAnimals();
   }
 
   /* ================= 基础状态 ================= */
@@ -199,12 +201,23 @@ export class LegionEngine {
    * 打卡：同一门店一天一次。
    * 首次打卡且未拥有该店将军 → 获得该店麦麦将军 x1 + 麦麦军 x3；
    * 已拥有该店将军 → 仅获得麦麦军 x3。
+   *
+   * @param {string} storeCode  门店编码
+   * @param {string} [city]     当前选择城市（备用：需要回查 MCP 时按该城市查）
+   * @param {object} [storeInfo] 前端门店快照（列表即来自同一路查询，优先直接使用，
+   *                             避免二次 MCP 查询因城市不一致/结果波动而「找不到门店」）
    */
-  async clockin(storeCode) {
+  async clockin(storeCode, city, storeInfo) {
     this.rollover();
     const today = todayStr();
-    const { mode, stores } = await this.mcp.getStores();
-    const store = stores.find((s) => String(s.storeCode) === String(storeCode));
+    let mode = this.mcp.mode ?? "online";
+    let store =
+      storeInfo && String(storeInfo.storeCode) === String(storeCode) ? storeInfo : null;
+    if (!store) {
+      const r = await this.mcp.getStores(city ? { city } : {});
+      mode = r.mode;
+      store = r.stores.find((s) => String(s.storeCode) === String(storeCode));
+    }
     if (!store) throw new Error("没有找到该门店，请刷新列表");
 
     const clocked = this.store.db
@@ -312,7 +325,8 @@ export class LegionEngine {
       throw new Error("今天已经偶遇过小动物了，明天再来");
     }
     const animalKey = pickRandom(ANIMAL_KEYS);
-    this.store.addUnit("animal", animalKey, "", DAILY.encounterAnimals);
+    // 每天仅一只：先清空动物行再写入，避免历史别名行导致同一只动物出现两张卡片
+    this.store.replaceAnimalUnit(animalKey, DAILY.encounterAnimals);
     this.store.markAnimalSeen(animalKey, today);
     this.store.markDaily(today, "encounter", animalKey);
     const def = ANIMALS[animalKey];

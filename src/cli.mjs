@@ -155,7 +155,7 @@ switch (cmd) {
     c.animals.forEach((a) => console.log(`  ${a.discovered ? "✔" : "○"} ${a.name}（战力${a.power}）${a.discovered ? ` 首遇 ${a.firstSeen}，共 ${a.seenCount} 次` : ""}`));
     console.log("打卡地：");
     c.stores.forEach((s) => console.log(`  ${s.storeName} — 打卡 ${s.clockinCount} 次${s.isManager ? "（店长）" : ""}`));
-    console.log("据点损毁图鉴：");
+    console.log("据点图鉴：");
     c.ruins.forEach((r) => console.log(`  ${r.name} — ${r.conquered ? "已攻略" : `损毁 ${r.damage}/5`}`));
     break;
   }
