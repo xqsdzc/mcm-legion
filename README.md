@@ -48,7 +48,7 @@ cp .env.example .env   # 编辑 .env 填入 MCD_MCP_TOKEN
 npm start               # 启动游戏 → http://localhost:3210
 npm run demo            # 命令行演示完整流程（独立存档）
 npm run cli             # 命令行交互游玩
-npm run check:game      # 游戏逻辑自检（98 项）
+npm run check:game      # 游戏逻辑自检（104 项）
 npm run check:web       # Web 界面冒烟测试（14 项，需 playwright）
 ```
 
@@ -110,7 +110,7 @@ mcd-pk/
 │   ├── build-avatars.py      头像生成（128px 头部特写）
 │   ├── gen-story-doc.mjs     由 story.js 生成剧情设定集文档
 │   ├── compress-docs.py      文档配图压缩（PNG→JPEG）
-│   ├── checkgame.mjs         游戏逻辑自检（98 项）
+│   ├── checkgame.mjs         游戏逻辑自检（104 项）
 │   └── smoke-web.mjs         Web 冒烟测试（14 项）
 ├── assets/                   角色/动物/据点 6 阶段/建设 6 阶段图像
 │   └── avatars/              22 张 128px 头部特写头像
