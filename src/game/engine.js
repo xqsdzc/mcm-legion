@@ -7,6 +7,7 @@
 import { UNITS, ANIMALS, STRONGHOLDS, WARRIOR_KEYS, ANIMAL_KEYS, BATTLE, DAILY, BUILD_RULES } from "./config.js";
 import { CHARACTERS, ANIMALS as ANIMAL_STORY, STRONGHOLDS as SH_STORY, DAMAGE, BUILD, WORLD } from "./story.js";
 import { pickDaily, pickRandom } from "./rng.js";
+import { ACHIEVEMENTS } from "./achievements.js";
 import { todayStr, nowLocalStr } from "../mcp/mcdApi.js";
 
 const TOTAL_STRONGHOLDS = STRONGHOLDS.length;
@@ -148,6 +149,7 @@ export class LegionEngine {
         done: built >= TOTAL_STRONGHOLDS,
       },
       animalsToday: army.detail.filter((d) => d.type === "animal"),
+      achievements: this.achievementsView(),
     };
   }
 
@@ -165,11 +167,13 @@ export class LegionEngine {
     const gender = pickRandom(["男", "女"]);
     this.store.addUnit("fan", "fan", gender, DAILY.checkinFans);
     this.store.markDaily(today, "checkin", `麦麦粉 x${DAILY.checkinFans}`);
+    const achievements = this.checkAchievements();
     const def = UNITS.fan;
     const asset = gender === "女" ? (def.altAsset ?? def.asset) : def.asset;
     return {
       gained: { key: "fan", count: DAILY.checkinFans, gender },
       firstEver,
+      achievements,
       items: [
         {
           type: def.type,
@@ -249,6 +253,7 @@ export class LegionEngine {
         generals: gotGeneral ? [{ name: store.storeName, count: 1 }] : [],
         juns: DAILY.clockinJuns,
       },
+      achievements: this.checkAchievements(),
       items,
     };
   }
@@ -295,7 +300,7 @@ export class LegionEngine {
         order: g.order,
       };
     });
-    return { mode, orderCount: orders.length, gained: gains, items };
+    return { mode, orderCount: orders.length, gained: gains, achievements: this.checkAchievements(), items };
   }
 
   /** 偶遇：每日一次，获得一只仅今天存在的小动物（真随机，同一天重开也可能是不同动物） */
@@ -312,6 +317,7 @@ export class LegionEngine {
     const def = ANIMALS[animalKey];
     return {
       gained: { key: animalKey, count: DAILY.encounterAnimals },
+      achievements: this.checkAchievements(),
       items: [
         {
           type: "animal",
@@ -466,6 +472,7 @@ export class LegionEngine {
       fromDamage: startDamage,
     };
     this.store.addBattleLog({ date: today, stronghold: key, detail: result });
+    result.achievements = this.checkAchievements();
     return result;
   }
 
@@ -532,6 +539,7 @@ export class LegionEngine {
       buildName: BUILD[this.store.getStronghold(key).build_step].name,
       buildDesc: BUILD[this.store.getStronghold(key).build_step].desc,
       built: this.store.getStronghold(key).build_step >= BUILD_RULES.steps - 1,
+      achievements: this.checkAchievements(),
     };
   }
 
@@ -607,6 +615,104 @@ export class LegionEngine {
     };
   }
 
+  /* ================= 成就 ================= */
+
+  /** 成就判定所需的统计快照（全部来自本地存档） */
+  _achievementStats() {
+    const db = this.store.db;
+    const q = (sql, ...args) => db.prepare(sql).get(...args) ?? {};
+    const checkinDays = q("SELECT COUNT(*) AS c FROM daily_log WHERE action = 'checkin'").c ?? 0;
+    const storeCount = q("SELECT COUNT(*) AS c FROM stores WHERE clockin_count > 0").c ?? 0;
+    // 订单奖励：解析每日订单记录，是否领到过战士
+    let firstOrder = false;
+    for (const row of db.prepare("SELECT detail FROM daily_log WHERE action = 'order'").all()) {
+      try {
+        if ((JSON.parse(row.detail || "{}").rewarded ?? []).length > 0) { firstOrder = true; break; }
+      } catch { /* 忽略坏数据 */ }
+    }
+    const warriors = q("SELECT COUNT(DISTINCT key) AS c FROM units WHERE type = 'warrior'").c ?? 0;
+    const generals = q("SELECT COALESCE(SUM(count), 0) AS c FROM units WHERE type = 'general'").c ?? 0;
+    const animalsSeen = q("SELECT COUNT(*) AS c FROM animal_seen").c ?? 0;
+    const rows = this.store.listStrongholds();
+    return {
+      checkinDays,
+      storeCount,
+      firstOrder,
+      warriors,
+      generals,
+      animalsSeen,
+      power: this.army().total,
+      damaged: rows.filter((r) => r.damage > 0).length,
+      conquered: rows.filter((r) => r.conquered).length,
+      built: rows.filter((r) => r.build_step >= BUILD_RULES.steps - 1).length,
+      buildStarted: rows.some((r) => r.build_step >= 0),
+    };
+  }
+
+  /** 各成就的解锁条件（依据统计快照，模块级纯函数便于测试） */
+  static #TESTS = {
+    first_fan: (s) => s.checkinDays >= 1,
+    checkin_7: (s) => s.checkinDays >= 7,
+    first_clockin: (s) => s.storeCount >= 1,
+    stores_5: (s) => s.storeCount >= 5,
+    stores_20: (s) => s.storeCount >= 20,
+    first_order: (s) => s.firstOrder,
+    warriors_9: (s) => s.warriors >= 8,
+    first_encounter: (s) => s.animalsSeen >= 1,
+    animals_10: (s) => s.animalsSeen >= 10,
+    generals_5: (s) => s.generals >= 5,
+    generals_10: (s) => s.generals >= 10,
+    power_1000: (s) => s.power >= 1000,
+    power_5000: (s) => s.power >= 5000,
+    first_blood: (s) => s.damaged >= 1,
+    first_conquer: (s) => s.conquered >= 1,
+    conquer_5: (s) => s.conquered >= 5,
+    conquer_all: (s) => s.conquered >= 9,
+    first_build: (s) => s.buildStarted,
+    first_built: (s) => s.built >= 1,
+    empire_done: (s) => s.built >= TOTAL_STRONGHOLDS,
+  };
+
+  /**
+   * 检查并解锁成就。在签到/打卡/订单/偶遇/攻略/派遣后调用。
+   * @returns {Array} 本批次新解锁的成就定义（含 badge/name/desc/flavor）
+   */
+  checkAchievements() {
+    const stats = this._achievementStats();
+    const tests = LegionEngine.#TESTS;
+    const unlocked = [];
+    for (const a of ACHIEVEMENTS) {
+      if (this.store.hasAchievement(a.key)) continue;
+      const test = tests[a.key];
+      if (test && test(stats)) {
+        this.store.unlockAchievement(a.key, nowLocalStr());
+        unlocked.push(a);
+      }
+    }
+    return unlocked;
+  }
+
+  /** 成就殿堂数据（全部成就 + 解锁状态） */
+  achievementsView() {
+    const rows = this.store.listAchievements();
+    const at = new Map(rows.map((r) => [r.key, r.unlocked_at]));
+    return {
+      unlocked: rows.length,
+      total: ACHIEVEMENTS.length,
+      items: ACHIEVEMENTS.map((a) => ({
+        key: a.key,
+        name: a.name,
+        desc: a.desc,
+        flavor: a.flavor,
+        tier: a.tier,
+        group: a.group,
+        badge: a.badge,
+        unlocked: at.has(a.key),
+        unlockedAt: at.get(a.key) ?? "",
+      })),
+    };
+  }
+
   /** 战报历史 */
   battles() {
     this.rollover();
@@ -625,6 +731,7 @@ export class LegionEngine {
       DELETE FROM units; DELETE FROM stores; DELETE FROM daily_log;
       DELETE FROM clockin_log; DELETE FROM animal_seen;
       DELETE FROM strongholds; DELETE FROM battle_log;
+      DELETE FROM achievements;
     `);
     this.store.ensurePlayer();
     this.store.ensureStrongholds(STRONGHOLDS.map((s) => s.key));

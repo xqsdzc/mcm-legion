@@ -230,4 +230,22 @@ export class LocalSqliteStore {
       .prepare("SELECT * FROM battle_log ORDER BY id DESC LIMIT ?")
       .all(limit);
   }
+
+  /* ---------------- 成就 ---------------- */
+
+  listAchievements() {
+    return this.db.prepare("SELECT * FROM achievements ORDER BY unlocked_at ASC, key ASC").all();
+  }
+
+  hasAchievement(key) {
+    return Boolean(this.db.prepare("SELECT 1 FROM achievements WHERE key = ?").get(key));
+  }
+
+  /** 解锁成就（已解锁则忽略，返回是否为新解锁） */
+  unlockAchievement(key, at) {
+    const r = this.db
+      .prepare("INSERT OR IGNORE INTO achievements (key, unlocked_at) VALUES (?, ?)")
+      .run(key, at);
+    return r.changes > 0;
+  }
 }

@@ -272,6 +272,69 @@ console.log("\n[7] 全据点通关曲线（自然收入模拟）");
   store.close();
 }
 
+console.log("\n[8] 成就系统");
+{
+  const { store, engine } = freshEngine();
+  const view0 = engine.getState().achievements;
+  ok(view0.total === 20, "共 20 枚成就");
+  ok(view0.unlocked === 0, "初始无解锁");
+  ok(view0.items.every((a) => a.badge.startsWith("<svg")), "每枚成就都带徽章 SVG");
+
+  const c = engine.checkin();
+  ok(c.achievements.some((a) => a.key === "first_fan"), "首次签到解锁「初入麦门」");
+  ok(store.hasAchievement("first_fan"), "成就已持久化");
+  ok(engine.checkAchievements().length === 0, "成就判定幂等（不重复解锁）");
+
+  await engine.claimOrders();
+  ok(store.hasAchievement("first_order"), "首次领订单奖励解锁「第一桶金」");
+
+  const { stores } = await engine.clockinStores();
+  for (let i = 0; i < 5; i++) await engine.clockin(stores[i].storeCode);
+  ok(store.hasAchievement("first_clockin"), "首次打卡解锁「第一站」");
+  ok(store.hasAchievement("stores_5"), "5 家门店解锁「巡城麦客」");
+  ok(store.hasAchievement("generals_5"), "同时 5 名将军解锁「五虎聚义」");
+
+  engine.encounter();
+  ok(store.hasAchievement("first_encounter"), "首次偶遇解锁「命中注定」");
+
+  // 集齐 8 种美食战士（战力随之破千）
+  for (const k of WARRIOR_KEYS) grant(store, "warrior", k, 3);
+  engine.checkAchievements();
+  ok(store.hasAchievement("warriors_9"), "集齐 8 种战士解锁「美食全员」");
+  ok(store.hasAchievement("power_1000"), "战力破千解锁「千钧一发」");
+  ok(store.hasAchievement("power_5000"), "战力破五千解锁「万夫莫开」");
+
+  // 攻略 + 建设全链路
+  engine.attack(STRONGHOLDS[0].key);
+  ok(store.hasAchievement("first_blood"), "首次损毁解锁「开门红」");
+  ok(store.hasAchievement("first_conquer"), "首次攻略解锁「首战告捷」");
+  const generalName = store.listUnits().find((u) => u.type === "general").name;
+  engine.dispatchBuild(STRONGHOLDS[0].key, generalName);
+  ok(store.hasAchievement("first_build"), "开启建设解锁「奠基之人」");
+  for (let i = 0; i < 5; i++) {
+    nextDay(store);
+    grant(store, "jun", "jun", 1);
+    engine.dispatchBuild(STRONGHOLDS[0].key, "");
+  }
+  ok(store.hasAchievement("first_built"), "第一座建成解锁「第一盏灯」");
+
+  // 直接补全其余据点进度，验证终局两项
+  for (const sh of STRONGHOLDS) {
+    store.updateStronghold(sh.key, { damage: 5, conquered: 1, build_step: 5, built_at: "2026-10-12 12:00:00" });
+  }
+  engine.checkAchievements();
+  ok(store.hasAchievement("conquer_all"), "全据点攻略解锁「九街归一」");
+  ok(store.hasAchievement("empire_done"), "全据点建成解锁「麦麦帝国」");
+  // 本流程未达成的长线成就：七日香火 / 20 家门店 / 十只动物 / 十位将军
+  const finalView = engine.getState().achievements;
+  ok(finalView.unlocked === 16, `本流程解锁 16 枚（实际 ${finalView.unlocked}）`);
+  ok(["checkin_7", "stores_20", "animals_10", "generals_10"].every((k) => !finalView.items.find((a) => a.key === k).unlocked), "长线成就保持未解锁");
+
+  engine.reset();
+  ok(engine.getState().achievements.unlocked === 0, "重置后成就清零");
+  store.close();
+}
+
 if (existsSync(DB)) rmSync(DB);
 console.log(`\n自检完成：${passed} 通过，${failed} 失败\n`);
 process.exit(failed > 0 ? 1 : 0);

@@ -9,6 +9,8 @@ const NAV_ICONS = {
   map: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.6 4 5.6 4 9s-1.2 6.4-4 9c-2.8-2.6-4-5.6-4-9s1.2-6.4 4-9z"/></svg>`,
   build: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9.5 21v-6h5v6"/></svg>`,
   codex: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17.5H6.5A2.5 2.5 0 0 0 4 22V4.5z"/><path d="M20 19.5V22H6.5"/><path d="M8.5 7h8M8.5 10.5h5"/></svg>`,
+  // 成就：勋章 + 绶带
+  achv: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5.4"/><path d="M12 6.9l.85 1.75 1.9.28-1.38 1.35.33 1.9L12 11.2l-1.7.9.33-1.9-1.38-1.35 1.9-.28L12 6.9z"/><path d="M8.6 13.4 7.1 21l4.9-2.4L16.9 21l-1.5-7.6"/></svg>`,
 };
 
 /* 今日行动图标（与底部导航同风格的线条 SVG） */
@@ -34,6 +36,8 @@ createApp({
     const modal = ref(null);
     const detail = ref(null);
     const gain = ref(null); // { title, subtitle, items: [{name,count,power,asset,assetAlt,story,extra,order}] }
+    const achvQueue = ref([]); // 待展示的「新解锁成就」队列
+    const achvShow = ref(null); // { items: [achievement...] } 当前解锁弹窗内容
     const pendingWorld = ref(false); // 首次签到后待展示世界观
     const toast = ref("");
     const showEnding = ref(false);
@@ -44,6 +48,7 @@ createApp({
       date: "", player: null, mcp: { mode: "offline" }, army: { detail: [], byType: {}, total: 0, vulnerable: 0 },
       frontier: null, daily: { checkin: false, encounter: false, order: { claimed: false }, dispatch: false },
       strongholds: [], empire: { conquered: 0, built: 0, total: 9, done: false }, animalsToday: [],
+      achievements: { unlocked: 0, total: 20, items: [] },
     });
     const state = ref(emptyState());
     const codex = ref({ animals: [], stores: [], ruins: [], characters: [], strongholdStories: [], world: {} });
@@ -109,13 +114,29 @@ createApp({
       modal.value = "gain";
     }
 
-    /** 关闭收获弹窗；若首次签到待展示世界观，则接着弹世界观 */
-    function closeGain() {
-      modal.value = null;
-      if (pendingWorld.value) {
+    /** 收集新解锁的成就；若当前无弹层则立即展示（否则在弹层关闭后接排） */
+    function queueAchievements(list) {
+      if (!list || !list.length) return;
+      achvQueue.value.push(...list);
+      if (!modal.value) showNextAchv();
+    }
+
+    /** 依次展示解锁成就弹窗（一次最多 3 枚）；展示完若还有待弹世界观则弹世界观 */
+    function showNextAchv() {
+      if (achvQueue.value.length) {
+        achvShow.value = { items: achvQueue.value.splice(0, 3) };
+        modal.value = "achv";
+      } else if (pendingWorld.value) {
         pendingWorld.value = false;
         modal.value = "world";
+      } else {
+        modal.value = null;
       }
+    }
+
+    /** 关闭收获弹窗；接着按队列展示成就/世界观 */
+    function closeGain() {
+      showNextAchv();
     }
 
     /* ---------- 数据加载 ---------- */
@@ -139,7 +160,7 @@ createApp({
     function onKeydown(e) {
       if (e.key !== "Escape") return;
       if (modal.value) {
-        if (modal.value === "gain") closeGain();
+        if (modal.value === "gain" || modal.value === "achv") showNextAchv();
         else modal.value = null;
         return;
       }
@@ -174,6 +195,7 @@ createApp({
         await refresh();
         if (r.firstEver) pendingWorld.value = true;
         showGain("签到收获", r.firstEver ? "欢迎加入麦麦军团" : "明天再来", r.items);
+        queueAchievements(r.achievements); // 先开收获弹窗再入队：关闭收获后按链展示
       } catch (e) { showToast(e.message); }
     }
 
@@ -230,6 +252,7 @@ createApp({
         const r = await api("/api/clockin", { storeCode });
         await refresh();
         showGain("打卡收获", r.store.storeName, r.items);
+        queueAchievements(r.achievements);
       } catch (e) { showToast(e.message); }
     }
 
@@ -237,10 +260,12 @@ createApp({
       try {
         const r = await api("/api/orders", {});
         if (!r.gained.length) {
+          queueAchievements(r.achievements);
           showToast(r.orderCount ? "今日订单奖励已领取" : "今天还没有订单，先去享用一餐吧");
         } else {
           await refresh();
           showGain("今日订单奖励", `共 ${r.orderCount} 笔订单`, r.items);
+          queueAchievements(r.achievements);
         }
       } catch (e) { showToast(e.message); }
     }
@@ -251,6 +276,7 @@ createApp({
         await refresh();
         await loadCodex();
         showGain("偶遇", "今日限定", r.items);
+        queueAchievements(r.achievements);
       } catch (e) { showToast(e.message); }
     }
 
@@ -260,6 +286,8 @@ createApp({
         await api("/api/reset", {});
         modal.value = null;
         pendingWorld.value = false;
+        achvQueue.value = [];
+        achvShow.value = null;
         endingShown = false;
         showEnding.value = false;
         battle.value.key = null;
@@ -358,6 +386,7 @@ createApp({
         }
         await refresh();
         await loadCodex();
+        queueAchievements(r.achievements);
       } catch (e) {
         showToast(e.message);
       } finally {
@@ -391,6 +420,7 @@ createApp({
         modal.value = null;
         await refresh();
         await loadCodex();
+        queueAchievements(r.achievements);
       } catch (e) { showToast(e.message); }
     }
 
@@ -442,6 +472,21 @@ createApp({
       modal.value = "animal";
     }
 
+    /* ---------- 成就详情 ---------- */
+    function showAchvDetail(a) {
+      detail.value = {
+        name: a.name,
+        tier: a.tier,
+        badge: a.badge,
+        unlocked: a.unlocked,
+        unlockedAt: a.unlockedAt,
+        desc: a.desc,
+        story: a.flavor,
+        extra: a.unlocked ? "" : "尚未解锁，继续征战吧",
+      };
+      modal.value = "achvDetail";
+    }
+
     /* ---------- 杂项 ---------- */
     const conqueredPct = computed(() => (state.value.empire.conquered / state.value.empire.total) * 100);
     const builtPct = computed(() => (state.value.empire.built / state.value.empire.total) * 100);
@@ -452,6 +497,7 @@ createApp({
       { key: "map", name: "地图", icon: NAV_ICONS.map },
       { key: "build", name: "建造", icon: NAV_ICONS.build },
       { key: "codex", name: "图鉴", icon: NAV_ICONS.codex },
+      { key: "achv", name: "成就", icon: NAV_ICONS.achv },
     ];
     const codexTabs = [
       { key: "animals", name: "动物图鉴" },
@@ -461,12 +507,13 @@ createApp({
 
     return {
       tab, tabs, codexTabs, codexTab, mapIndex, modal, detail, gain, toast, showEnding,
+      achvQueue, achvShow,
       state, codex, stores, currentSh, shStatus, shAsset, damageStages, shiftStronghold,
       enterBattle, quitBattle, battle, battleUnits, battleArmyPower, battleImage, canAttack, startAttack, battleLogEl,
       buildSites, buildSteps, buildStepName, openDispatch, doDispatch, chooseGeneral, myGenerals,
       unitGroups, showUnit, showAnimal, doCheckin, openStores, doClockin, doOrders, doEncounter, doReset,
       city, cityInput, cityPickerOpen, locating, hotCities, locateCity, switchCity,
-      fmtNum, asset, avatarUrl, unitName, unitLabel, closeGain, pendingWorld,
+      fmtNum, asset, avatarUrl, unitName, unitLabel, closeGain, showNextAchv, showAchvDetail, pendingWorld,
       ACTION_ICONS, conqueredPct, builtPct, endingText, strongholds,
     };
   },

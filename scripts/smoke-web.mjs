@@ -58,6 +58,21 @@ page.on("console", (m) => {
   }
 });
 
+/** 关闭当前所有链式弹层（收获 → 成就解锁 → 世界观可能连弹） */
+async function closeAllModals(page) {
+  for (let i = 0; i < 6; i++) {
+    if (!(await page.locator(".modal-layer").count())) break;
+    const btn = page.locator(".modal-layer .btn-primary").last();
+    if (await btn.count()) await btn.click();
+    else {
+      const ghost = page.locator(".modal-layer .btn-ghost").last();
+      if (await ghost.count()) await ghost.click();
+      else break;
+    }
+    await page.waitForTimeout(250);
+  }
+}
+
 console.log(`\n打开 ${BASE} ...`);
 await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".hud-power .value", { timeout: 8000 });
@@ -80,13 +95,8 @@ await page.screenshot({ path: join(SHOTS, "02-clockin.png") });
 const clockinBtn = page.locator(".store-item").first();
 await clockinBtn.click();
 await page.waitForTimeout(800);
-// 打卡成功会弹出「收获」弹层；失败（如今日已打卡）则手动关闭
-if (await page.locator(".modal-layer").count()) {
-  const gainBtn = page.locator(".modal-layer .gain-modal .btn-primary");
-  if (await gainBtn.count()) await gainBtn.click();
-  else await page.locator(".modal-layer .btn-ghost").last().click();
-  await page.waitForTimeout(300);
-}
+// 打卡成功会依次弹出「收获 → 成就解锁（首次）」等链式弹层；失败（如今日已打卡）则手动关闭
+await closeAllModals(page);
 
 // 地图页
 await page.locator(".hud-nav button").nth(1).click();
@@ -119,6 +129,8 @@ if (await enterBtn.count()) {
       const logCount = await page.locator(".battle-log > div").count();
       ok(logCount > 0, `战斗日志 ${logCount} 条`);
       await page.screenshot({ path: join(SHOTS, "05-battle-result.png") });
+      // 战斗可能解锁成就（弹层压在攻略场景之上），先关掉再撤退
+      await closeAllModals(page);
     }
     // 撤退
     await page.locator(".battle-top .btn-ghost").click();
@@ -146,6 +158,18 @@ await page.screenshot({ path: join(SHOTS, "08-codex-stores.png") });
 await page.locator(".codex-tabs button").nth(2).click();
 await page.waitForTimeout(300);
 await page.screenshot({ path: join(SHOTS, "09-codex-ruins.png") });
+
+// 成就页
+await page.locator(".hud-nav button").nth(4).click();
+await page.waitForTimeout(500);
+ok(await page.locator(".achv-cell").count() === 20, "成就殿堂 20 枚徽章");
+const unlockedCells = await page.locator(".achv-cell.on").count();
+ok(unlockedCells >= 1, `已解锁徽章 ${unlockedCells} 枚（含打卡解锁）`);
+await page.locator(".achv-cell.on").first().click();
+await page.waitForSelector(".achv-detail-modal", { timeout: 5000 });
+ok(await page.locator(".achv-detail-modal .achv-badge svg").count() === 1, "成就详情展示徽章");
+await closeAllModals(page);
+await page.screenshot({ path: join(SHOTS, "10-achievements.png") });
 
 // 无 JS 报错
 ok(errors.length === 0, `无前端报错${errors.length ? "：" + errors.slice(0, 3).join(" | ") : ""}`);

@@ -239,6 +239,20 @@
           </div>
         </template>
       </section>
+      <!-- ============ 成就 ============ -->
+      <section v-show="tab === 'achv'" class="page">
+        <div class="panel">
+          <div class="panel-title">成就殿堂 <span class="panel-sub">已解锁 {{ state.achievements.unlocked }}/{{ state.achievements.total }}</span></div>
+          <div class="achv-grid">
+            <button v-for="a in state.achievements.items" :key="a.key" class="achv-cell"
+                    :class="{ on: a.unlocked }" @click="showAchvDetail(a)">
+              <span class="achv-badge" :class="'t' + a.tier" v-html="a.badge"></span>
+              <span class="achv-name">{{ a.unlocked ? a.name : '？？？' }}</span>
+            </button>
+          </div>
+          <div class="empty-tip" v-if="!state.achievements.items.length">成就加载中…</div>
+        </div>
+      </section>
     </main>
 
     <!-- ============ 攻略场景 ============ -->
@@ -383,6 +397,42 @@
           <div class="panel-title">世界观 <span class="panel-sub">麦麦军团 · 起源</span></div>
           <div class="ending-text">{{ codex.world.intro }}</div>
           <button class="btn-primary" @click="modal = null">开始征战</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：成就解锁 ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'achv'">
+        <div class="modal panel achv-modal" v-if="achvShow">
+          <div class="panel-title">成就解锁 <span class="panel-sub" v-if="achvShow.items.length > 1">连获 {{ achvShow.items.length }} 枚</span></div>
+          <div class="achv-unlock-list">
+            <div class="achv-unlock-item" v-for="a in achvShow.items" :key="a.key">
+              <span class="achv-badge lg" :class="'t' + a.tier" v-html="a.badge"></span>
+              <div class="au-info">
+                <div class="au-name">{{ a.name }}</div>
+                <div class="au-desc">{{ a.desc }}</div>
+                <div class="au-flavor">{{ a.flavor }}</div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-primary" @click="showNextAchv">收下</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 弹层：成就详情 ============ -->
+    <transition name="fade">
+      <div class="modal-layer" v-if="modal === 'achvDetail'">
+        <div class="modal panel detail-modal achv-detail-modal" v-if="detail">
+          <div class="achv-detail-art">
+            <span class="achv-badge xl" :class="'t' + detail.tier" v-html="detail.badge"></span>
+          </div>
+          <div class="detail-name">{{ detail.name }} <span class="detail-power">{{ detail.unlocked ? '已解锁' : '未解锁' }}</span></div>
+          <div class="detail-story">{{ detail.desc }}</div>
+          <div class="detail-extra" v-if="detail.story">{{ detail.story }}</div>
+          <div class="detail-extra" v-if="detail.unlocked">解锁于 {{ detail.unlockedAt }}</div>
+          <button class="btn-ghost" @click="modal = null">关闭</button>
         </div>
       </div>
     </transition>

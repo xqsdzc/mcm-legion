@@ -531,7 +531,7 @@ body::after {
 .hud-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 560px; z-index: 60;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   background: linear-gradient(180deg, rgba(8, 22, 42, 0.88), rgba(6, 16, 32, 0.98));
   border-top: 1px solid var(--panel-line);
   backdrop-filter: blur(8px);
@@ -696,3 +696,76 @@ body::after {
   .gain-item .unit-art { flex-basis: 64px; width: 64px; height: 64px; }
   .gain-story { font-size: 10px; line-height: 1.5; }
 }
+
+/* ============================================================
+   成就系统（殿堂网格 / 徽章 / 解锁弹窗）
+   ============================================================ */
+/* 徽章：tier 1 普通(青) / 2 精英(金) / 3 史诗(红) */
+.achv-badge { display: inline-block; line-height: 0; }
+.achv-badge svg { width: 40px; height: 40px; display: block; }
+.achv-badge.t1 { color: var(--cyan); }
+.achv-badge.t2 { color: var(--gold); }
+.achv-badge.t3 { color: #ff8f6b; }
+.achv-badge.lg svg { width: 52px; height: 52px; }
+.achv-badge.xl svg { width: 76px; height: 76px; }
+
+/* 成就殿堂网格 */
+.achv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 6px; }
+.achv-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 2px 8px;
+  background: rgba(77, 219, 255, 0.05);
+  border: 1px solid rgba(77, 219, 255, 0.16);
+  border-radius: 10px;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.15s ease;
+}
+.achv-cell:hover { border-color: var(--cyan-dim); background: rgba(77, 219, 255, 0.1); }
+.achv-cell.on { border-color: rgba(255, 197, 61, 0.4); background: rgba(255, 197, 61, 0.06); }
+.achv-cell.on .achv-badge { filter: drop-shadow(0 0 8px currentColor); }
+.achv-cell:not(.on) { opacity: 0.45; }
+.achv-cell:not(.on) .achv-badge { filter: grayscale(0.9); }
+.achv-cell:not(.on) .achv-name { color: var(--text-dim); }
+.achv-name {
+  font-size: 10px; letter-spacing: 0.5px; color: var(--text);
+  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 成就解锁弹窗（金色庆典） */
+.achv-modal { max-width: 420px; text-align: center; }
+.achv-modal .panel-title { justify-content: center; }
+.achv-unlock-list {
+  display: flex; flex-direction: column; gap: 14px;
+  margin: 6px 2px 16px;
+  max-height: 56vh; overflow-y: auto;
+}
+.achv-unlock-item {
+  display: flex; gap: 14px; align-items: center; text-align: left;
+  padding: 12px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255, 197, 61, 0.12), rgba(255, 197, 61, 0.03));
+  border: 1px solid rgba(255, 197, 61, 0.35);
+  box-shadow: 0 0 18px rgba(255, 197, 61, 0.12), inset 0 0 18px rgba(255, 197, 61, 0.05);
+  animation: achvPop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.achv-unlock-item:nth-child(2) { animation-delay: 0.12s; }
+.achv-unlock-item:nth-child(3) { animation-delay: 0.24s; }
+@keyframes achvPop {
+  from { opacity: 0; transform: scale(0.7) translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.au-info { flex: 1; min-width: 0; }
+.au-name { font-size: 15px; font-weight: 700; letter-spacing: 2px; color: var(--gold); text-shadow: 0 0 10px rgba(255, 197, 61, 0.5); }
+.au-desc { font-size: 11px; color: var(--cyan-dim); margin-top: 3px; letter-spacing: 0.5px; }
+.au-flavor {
+  font-size: 11px; line-height: 1.7; color: rgba(217, 242, 255, 0.85);
+  margin-top: 6px; padding-left: 8px; border-left: 2px solid rgba(255, 197, 61, 0.45);
+}
+
+/* 成就详情弹层 */
+.achv-detail-modal .achv-detail-art {
+  position: relative; height: 120px;
+  display: grid; place-items: center;
+  flex: 0 0 auto;
+}
+.achv-detail-modal .achv-detail-art .achv-badge { filter: drop-shadow(0 0 14px currentColor); }
+.achv-detail-modal .detail-power { color: var(--gold); }

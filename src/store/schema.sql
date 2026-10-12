@@ -79,3 +79,9 @@ CREATE TABLE IF NOT EXISTS battle_log (
   created_at  TEXT NOT NULL,
   detail      TEXT NOT NULL           -- JSON：各阶段损失明细
 );
+
+-- 成就（解锁记录；定义见 src/game/achievements.js）
+CREATE TABLE IF NOT EXISTS achievements (
+  key         TEXT PRIMARY KEY,
+  unlocked_at TEXT NOT NULL
+);
