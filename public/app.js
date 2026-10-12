@@ -51,6 +51,13 @@ createApp({
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const fmtNum = (n) => (n ?? 0).toLocaleString("zh-CN");
     const asset = (p) => (p ? `/assets/${p}` : "");
+
+    // 出战编制小图标：使用 assets/avatars/ 头部特写（麦麦粉男女交替）
+    const avatarUrl = (u, i) => {
+      let p = u.asset || "";
+      if (u.assetAlt && i % 2 === 1) p = u.assetAlt;
+      return p ? `/assets/avatars/${p.split("/").pop()}` : "";
+    };
     const unitName = (key) => {
       const hit = codex.value.characters.find((c) => c.key === key)
         ?? codex.value.animals.find((a) => a.key === key);
@@ -333,7 +340,7 @@ createApp({
       enterBattle, quitBattle, battle, battleUnits, battleArmyPower, battleImage, canAttack, startAttack, battleLogEl,
       buildSites, buildSteps, buildStepName, openDispatch, doDispatch, chooseGeneral, myGenerals,
       unitGroups, showUnit, showAnimal, doCheckin, openStores, doClockin, doOrders, doEncounter,
-      fmtNum, asset, unitName, empirePct, endingText, strongholds,
+      fmtNum, asset, avatarUrl, unitName, empirePct, endingText, strongholds,
     };
   },
 }).mount("#app");

@@ -4,6 +4,7 @@
  *
  *   node server.mjs           启动游戏 → http://localhost:3210
  *   PORT=8080 node server.mjs 指定端口
+ *   MCD_DB=data/test.db node server.mjs  使用独立存档（测试用）
  *
  * 零外部依赖即可启动（离线演示模式）；
  * 配置 MCD_MCP_TOKEN 后自动切换为麦当劳 MCP 真实数据模式。
@@ -22,7 +23,8 @@ const ROOT = __dirname;
 const PUBLIC = join(ROOT, "public");
 const ASSETS = join(ROOT, "assets");
 const DATA_DIR = join(ROOT, "data");
-const DB_PATH = join(DATA_DIR, "mcm-legion.db");
+// MCD_DB 可指向其他存档文件（测试/演示用）；默认 data/mcm-legion.db
+const DB_PATH = process.env.MCD_DB ? join(ROOT, process.env.MCD_DB) : join(DATA_DIR, "mcm-legion.db");
 const PORT = Number(process.env.PORT || 3210);
 
 /* ---- 极简 .env 解析（不引入 dotenv 依赖） ---- */

@@ -51,6 +51,8 @@ export class LegionEngine {
         count: u.count,
         unitPower: def?.power ?? 0,
         power: (def?.power ?? 0) * u.count,
+        asset: def?.asset ?? "",
+        assetAlt: def?.altAsset ?? "",
         def: def ?? null,
       };
     });

@@ -245,8 +245,8 @@
           <div class="battle-left panel">
             <div class="panel-title">麦麦军团 <span class="panel-sub">出战编制</span></div>
             <div class="battle-units">
-              <div class="bu-row" v-for="u in battleUnits" :key="u.key + u.name">
-                <img :src="asset(u.asset)" :alt="u.name" loading="lazy" />
+              <div class="bu-row" v-for="(u, i) in battleUnits" :key="u.key + u.name">
+                <img :src="avatarUrl(u, i)" :alt="u.name" loading="lazy" />
                 <span class="bu-name">{{ u.name || unitName(u.key) }}</span>
                 <span class="bu-count" :class="{ zero: u.count === 0 }">×{{ u.count }}</span>
               </div>

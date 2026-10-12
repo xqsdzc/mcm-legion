@@ -11,7 +11,9 @@
     "demo": "node src/cli.mjs demo",
     "check:game": "node scripts/checkgame.mjs",
     "check:web": "node scripts/smoke-web.mjs",
-    "assets": "python scripts/build-assets.py"
+    "assets": "python scripts/build-assets.py",
+    "assets:avatars": "python scripts/build-avatars.py",
+    "docs:compress": "python scripts/compress-docs.py"
   },
   "engines": {
     "node": ">=22.5"

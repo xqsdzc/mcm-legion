@@ -3,7 +3,7 @@
 > 基于**麦当劳中国 MCP** 的收集 × 攻略 × 建设放置式游戏 Skill——
 > 用你真实的到店打卡与当日订单，组建麦麦军团，攻陷九座竞争对手据点，再亲手把它们一座座建成麦麦据点，直到**麦麦帝国**的九座拱门同时亮起。
 
-![UI 风格](docs/ui-styles/style-1-hologram-command-map.png)
+![UI 风格](docs/ui-styles/style-1-hologram-command-map.jpg)
 
 ## ✨ 项目介绍
 
@@ -52,8 +52,10 @@ npm run check:game      # 游戏逻辑自检（52 项）
 npm run check:web       # Web 界面冒烟测试（需 playwright）
 ```
 
-> **美术资源**：`raw/` 下为 86 张原始大图（约 3MB/张），已生成 Web 用资产到 `assets/`（8.3MB）。
-> 重新生成：`pip install pillow && npm run assets`。
+> **美术资源**：`raw/` 下为 86 张原始大图（约 3MB/张），由脚本生成 Web 用资产：
+> `assets/` 立绘与据点图（据点/建设 384px、角色/动物 320px，共 3.6MB）+
+> `assets/avatars/` 128px 头部特写头像（22 张共 196KB，供出战编制等小图标位）。
+> 重新生成：`pip install pillow && npm run assets && npm run assets:avatars`。
 
 ## 🎮 使用示例
 
@@ -63,9 +65,9 @@ npm run check:web       # Web 界面冒烟测试（需 playwright）
 4. **建设**：据点完全损毁后解锁建设，开启需任命 1 名麦麦将军为**店长**，后续每次派遣消耗 1 名麦麦军，共 6 步（夯土奠基 → 盛大开业），每日限派遣 1 次。
 5. **图鉴**：动物图鉴（10 只）、打卡地（门店打卡记录）、据点损毁图鉴（已攻略据点的 6 段损毁场景）。
 
-![军团](docs/screenshots/01b-legion-full.png)
-![攻略](docs/screenshots/05b-battle-result.png)
-![建设](docs/screenshots/06c-build-started.png)
+![军团](docs/screenshots/01b-legion-full.jpg)
+![攻略](docs/screenshots/05b-battle-result.jpg)
+![建设](docs/screenshots/06c-build-started.jpg)
 
 ## 👥 目标用户
 
@@ -78,7 +80,7 @@ npm run check:web       # Web 界面冒烟测试（需 playwright）
 - **后端**：Node.js 原生 HTTP 服务（`server.mjs`），零框架；本地数据库使用内置 `node:sqlite`（SQLite WAL 模式）
 - **MCP**：`@modelcontextprotocol/sdk` StreamableHTTP 客户端，动态 import，未安装不影响启动
 - **前端**：Vue 3（本地化 `public/vendor/vue.global.prod.js`，无外部网络依赖），全息指挥地图 UI 风格
-- **美术**：`raw/` 原始大图 → `scripts/build-assets.py`（Pillow 裁切/缩放/256 色量化）→ `assets/` Web 资产
+- **美术**：`raw/` 原始大图 → `scripts/build-assets.py`（Pillow 裁切/缩放/256 色量化）→ `assets/` Web 资产；`scripts/build-avatars.py` 另切 128px 头像；`scripts/compress-docs.py` 压缩文档配图
 
 ```
 mcd-pk/
@@ -98,10 +100,13 @@ mcd-pk/
 │       ├── engine.js         游戏引擎（签到/打卡/订单/偶遇/攻略/建设/图鉴）
 │       └── rng.js            带种子的确定性随机
 ├── scripts/
-│   ├── build-assets.py       美术资产生成
+│   ├── build-assets.py       美术资产生成（立绘/据点/建设）
+│   ├── build-avatars.py      头像生成（128px 头部特写）
+│   ├── compress-docs.py      文档配图压缩（PNG→JPEG）
 │   ├── checkgame.mjs         游戏逻辑自检（52 项）
 │   └── smoke-web.mjs         Web 冒烟测试
 ├── assets/                   角色/动物/据点 6 阶段/建设 6 阶段图像
+│   └── avatars/              22 张 128px 头部特写头像
 ├── public/                   Vue 单页应用（全息 UI）
 └── docs/
     ├── 游戏玩法设计.md        完整玩法设计文档

@@ -6,7 +6,7 @@
 
 ## 一、需求阶段
 
-用户提出参赛创意：基于麦当劳 MCP 能力做一个"收集战力 → 攻略竞争对手据点 → 重建麦麦据点 → 建立麦麦帝国"的游戏，要求明确的收集机制（签到/打卡/订单/偶遇）、5 阶段攻略规则、6 步建设任务、图鉴系统，并上传到 GitLab 参加 [mcd-developer-innovation-challenge](https://github.com/M-China/mcd-developer-innovation-challenge)。
+用户提出参赛创意：基于麦当劳 MCP 能力做一个"收集战力 → 攻略竞争对手据点 → 重建麦麦据点 → 建立麦麦帝国"的游戏，要求明确的收集机制（签到/打卡/订单/偶遇）、5 阶段攻略规则、6 步建设任务、图鉴系统，并上传到 GitHub 参加 [mcd-developer-innovation-challenge](https://github.com/M-China/mcd-developer-innovation-challenge)。
 
 WorkBuddy 首先完成了三件事：
 
@@ -25,6 +25,8 @@ WorkBuddy 首先完成了三件事：
 3. FASTOCTREE 256 色量化转 PNG8。
 
 **结果：86 张 270MB → 82 个文件 8.27MB**，视觉无损、秒级加载。
+
+**二轮压缩**（参赛前减重）：据点/建设 640→384px、角色/动物 512→320px，主资产降至 3.6MB；新增 `scripts/build-avatars.py` 从立绘切割 128px 头部特写头像 22 张（196KB）；`scripts/compress-docs.py` 将 UI 风格图与实机截图转 JPEG（再省 2.9MB）。
 
 ---
 
@@ -70,6 +72,8 @@ WorkBuddy 首先完成了三件事：
 
 踩坑：Vue 3 模板 `ref` 名必须与 `setup()` 返回的变量名一致才能自动滚动（曾因 `battleLog` vs `battleLogEl` 不一致导致日志不滚动）。
 
+截图复查发现的 Bug：攻略页出战编制图标全部不显示——`engine.army()` 的 detail 只有 `def` 对象没有顶层 `asset` 字段，而模板用 `asset(u.asset)` 得到空 `src`（军团页用 `u.def.asset` 所以没暴露）。修复：detail 补 `asset`/`assetAlt` 字段，并配套生成 128px 头像资产（麦麦粉男女交替）。
+
 ---
 
 ## 五、文档与参赛材料
@@ -90,4 +94,4 @@ WorkBuddy 首先完成了三件事：
 
 - 服务运行于 `http://localhost:3210`（后台任务，端口 3210）；
 - 数据文件 `data/mcd-army.db` 已 gitignore；
-- 待办：初始化 git 仓库并推送至 GitLab（需用户提供仓库地址）。
+- 待办：推送至 GitHub（需用户提供仓库地址；仓库已 git init 并完成首次提交 f2105cb）。
